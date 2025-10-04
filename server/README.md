@@ -91,6 +91,20 @@ You can set environment variables for your project:
 agentuity env set KEY VALUE
 ```
 
+#### Browser Automation Agent Variables
+
+- **`GOOGLE_API_KEY`** (required): Your Google AI API key for the agent
+- **`KEEP_BROWSER_OPEN`** (optional): Set to `true` to keep browser open for manual inspection (dev mode)
+
+Example:
+```bash
+# For development (browser stays open)
+agentuity env set KEEP_BROWSER_OPEN true
+
+# For production (browser closes automatically)
+agentuity env set KEEP_BROWSER_OPEN false
+```
+
 ### Secrets Management
 
 For sensitive information, use secrets:
