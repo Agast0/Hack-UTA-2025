@@ -1,29 +1,37 @@
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
 import uvicorn
+import os
+import logging
+from dotenv import load_dotenv
 
-app = FastAPI(
-    title="HackUTA Server",
-    description="A FastAPI server for HackUTA project",
-    version="1.0.0"
-)
+# Load environment variables from .env file
+load_dotenv()
 
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {"message": "Welcome to HackUTA Server"}
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return JSONResponse(
-        status_code=200,
-        content={
-            "status": "healthy",
-            "message": "Server is running properly",
-            "service": "HackUTA Server"
-        }
+def main():
+    """Start the FastAPI server for the Agentuity agent"""
+    # Setup logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(levelname)-5.5s] %(message)s",
+    )
+    
+    # Check for required environment variables
+    if not os.getenv("GOOGLE_API_KEY"):
+        print("\033[31m[ERROR] GOOGLE_API_KEY environment variable is required\033[0m")
+        exit(1)
+    
+    print("Starting Agentuity Agent FastAPI server...")
+    print("API Documentation available at: http://localhost:8000/docs")
+    print("Agent endpoint: http://localhost:8000/agent")
+    
+    # Run the FastAPI server
+    uvicorn.run(
+        "fastapi_server:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info"
     )
 
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    main()
