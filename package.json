@@ -1,0 +1,15 @@
+{
+  "name": "bugzooka-hackathon",
+  "version": "1.0.0",
+  "description": "BugZooka - AI-Powered Bug Hunting Platform for HackUTA 2025",
+  "scripts": {
+    "dev": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "cd client && npm run start",
+    "install:client": "cd client && npm install",
+    "install:all": "npm run install:client"
+  },
+  "keywords": ["bug-hunting", "security", "nextjs", "hackathon"],
+  "author": "HackUTA 2025 Team",
+  "license": "MIT"
+}
