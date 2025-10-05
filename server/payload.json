@@ -1,0 +1,9 @@
+[
+  {
+    "sub": "auth0|123456789",
+    "email": "test.user@example.com",
+    "name": "Test User",
+    "picture": "https://example.com/avatar.png"
+  },
+  "http://localhost:8000/api/user/auth0%7C123456789"
+]
