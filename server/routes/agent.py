@@ -47,11 +47,18 @@ async def run_agent(request: AgentRequestModel):
         # Create FastAPI-compatible request/response objects
         class FastAPIRequest:
             def __init__(self, url: str, content_type: str = "text/plain", tester_user_id: str = None, test_cases: list = None):
-                self.data = url  # Direct string for FastAPI
                 self.content_type = content_type
                 self.url = url
                 self.tester_user_id = tester_user_id
                 self.test_cases = test_cases
+                
+                # Create a proper data object with both url and test_cases
+                class RequestData:
+                    def __init__(self, url, test_cases):
+                        self.url = url
+                        self.test_cases = test_cases
+                
+                self.data = RequestData(url, test_cases)
         
         class FastAPIResponse:
             def __init__(self):
