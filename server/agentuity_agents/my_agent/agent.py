@@ -322,7 +322,6 @@ async def execute_bug_hunting(browser_context, driver, initial_elements, initial
     return response.text(final_response)
 
 async def execute_test_cases(test_cases, browser_context, driver, initial_elements, initial_screenshot_path, context, response):
-    # (This function is correct and remains unchanged)
     all_results = []
     overall_action_log = []
 
@@ -334,8 +333,49 @@ async def execute_test_cases(test_cases, browser_context, driver, initial_elemen
         else:
             test_cases_as_dicts.append(tc) # Assume it's already a dict
 
+    # Get the original URL from browser_context
+    original_url = browser_context.get('input_url', 'https://hackuta.org')
+
     for i, test_case in enumerate(test_cases_as_dicts, 1):
         context.logger.info(f"--- Running Test Case {i}/{len(test_cases_as_dicts)}: {test_case.get('what_to_test')} ---")
+        
+        # Close the current driver and start fresh for each test case
+        try:
+            driver.quit()
+            context.logger.info("Closed previous browser instance")
+        except:
+            pass
+        
+        # Setup fresh browser for this test case
+        success, message, fresh_browser_context = deterministic_browser_setup(original_url, context)
+        if not success:
+            all_results.append({
+                "test_case": i,
+                "objective": test_case.get('what_to_test'),
+                "result": f"Failed to setup fresh browser: {message}"
+            })
+            continue
+        
+        fresh_driver = fresh_browser_context["driver"]
+        fresh_initial_elements = discover_page_elements(fresh_driver)
+        if "error" in fresh_initial_elements:
+            all_results.append({
+                "test_case": i,
+                "objective": test_case.get('what_to_test'),
+                "result": f"Failed to discover page elements: {fresh_initial_elements['error']}"
+            })
+            fresh_driver.quit()
+            continue
+        
+        fresh_initial_screenshot_path = take_annotated_screenshot(fresh_driver, fresh_initial_elements)
+        if fresh_initial_screenshot_path.startswith("Failed"):
+            all_results.append({
+                "test_case": i,
+                "objective": test_case.get('what_to_test'),
+                "result": f"Failed to create screenshot: {fresh_initial_screenshot_path}"
+            })
+            fresh_driver.quit()
+            continue
         
         specific_task_prompt = f"""
         {TEST_CASE_PROMPT}
@@ -347,9 +387,9 @@ async def execute_test_cases(test_cases, browser_context, driver, initial_elemen
 
         result_text, action_log_for_this_test = await run_agent_loop(
             task_prompt=specific_task_prompt,
-            driver=driver,
-            initial_elements=initial_elements,
-            initial_screenshot_path=initial_screenshot_path,
+            driver=fresh_driver,
+            initial_elements=fresh_initial_elements,
+            initial_screenshot_path=fresh_initial_screenshot_path,
             context=context
         )
         
@@ -360,8 +400,12 @@ async def execute_test_cases(test_cases, browser_context, driver, initial_elemen
         })
         overall_action_log.extend(action_log_for_this_test)
         
-        initial_elements = discover_page_elements(driver)
-        initial_screenshot_path = take_annotated_screenshot(driver, initial_elements)
+        # Close the browser for this test case
+        try:
+            fresh_driver.quit()
+            context.logger.info(f"Closed browser for test case {i}")
+        except:
+            pass
 
     final_response = "### Test Case Execution Summary\n\n"
     for res in all_results:
