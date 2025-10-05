@@ -6,6 +6,12 @@ import { User, Team, AgentRun, BugReport } from '@/types/bug';
 import { userApi, teamApi, ApiError, bugApi, auditsApi } from '@/lib/api';
 
 // --- Interfaces for State ---
+interface UiState {
+  mlgMode: boolean;
+  toggleMlgMode: () => void;
+  setMlgMode: (value: boolean) => void;
+}
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
