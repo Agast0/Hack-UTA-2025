@@ -32,6 +32,115 @@ AVAILABLE_TOOLS = {
     "scroll_page": scroll_page,
 }
 
+def convert_screenshots_to_base64(bug_report: dict) -> dict:
+    """
+    Convert screenshot paths in bug report to base64 encoded images.
+    
+    Args:
+        bug_report (dict): Bug report with screenshot paths
+        
+    Returns:
+        dict: Bug report with base64 encoded images
+    """
+    print(f"🔍 Current working directory: {os.getcwd()}")
+    if 'reproduction_steps' in bug_report:
+        for step in bug_report['reproduction_steps']:
+            if 'image_url' in step:
+                image_path = step['image_url']
+                
+                # Check if it's a screenshot path (not already base64)
+                if not image_path.startswith('data:image'):
+                    # Look for the screenshot file
+                    screenshot_path = None
+                    
+                    # Normalize the image path - add .png extension if no extension
+                    original_path = image_path
+                    if not any(image_path.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.gif', '.bmp']):
+                        image_path = image_path + '.png'
+                        print(f"🔧 Normalized path: '{original_path}' -> '{image_path}'")
+                    
+                    # Check in bug_screenshots directory first
+                    bug_screenshots_dir = os.path.join(os.getcwd(), "bug_screenshots")
+                    if os.path.exists(bug_screenshots_dir):
+                        full_path = os.path.join(bug_screenshots_dir, image_path)
+                        if os.path.exists(full_path):
+                            screenshot_path = full_path
+                    
+                    # If not found, try server/bug_screenshots directory
+                    if not screenshot_path:
+                        server_bug_screenshots_dir = os.path.join(os.getcwd(), "server", "bug_screenshots")
+                        if os.path.exists(server_bug_screenshots_dir):
+                            full_path = os.path.join(server_bug_screenshots_dir, image_path)
+                            if os.path.exists(full_path):
+                                screenshot_path = full_path
+                    
+                    # If not found, try current directory
+                    if not screenshot_path:
+                        full_path = os.path.join(os.getcwd(), image_path)
+                        if os.path.exists(full_path):
+                            screenshot_path = full_path
+                    
+                    # Convert to base64 if found
+                    if screenshot_path and os.path.exists(screenshot_path):
+                        try:
+                            with open(screenshot_path, 'rb') as f:
+                                image_data = f.read()
+                                base64_data = base64.b64encode(image_data).decode('utf-8')
+                                step['image_url'] = f"data:image/png;base64,{base64_data}"
+                                print(f"✅ Successfully converted screenshot: {screenshot_path}")
+                        except Exception as e:
+                            print(f"❌ Error converting screenshot {screenshot_path}: {e}")
+                            step['image_url'] = "data:image/png;base64,"  # Empty base64
+                    else:
+                        # Screenshot not found, use empty base64
+                        print(f"❌ Screenshot not found: {image_path}")
+                        step['image_url'] = "data:image/png;base64,"
+    
+    return bug_report
+
+def cleanup_screenshots():
+    """
+    Delete all screenshot files after they've been converted to base64.
+    """
+    import glob
+    
+    print(f"🧹 Starting cleanup from directory: {os.getcwd()}")
+    
+    # Clean up bug screenshots directory - check both possible locations
+    bug_screenshots_dirs = [
+        os.path.join(os.getcwd(), "bug_screenshots"),  # Current directory
+        os.path.join(os.getcwd(), "server", "bug_screenshots"),  # Server subdirectory
+        os.path.join(os.path.dirname(os.getcwd()), "server", "bug_screenshots")  # Parent/server
+    ]
+    
+    for bug_screenshots_dir in bug_screenshots_dirs:
+        if os.path.exists(bug_screenshots_dir):
+            print(f"🔍 Found bug screenshots directory: {bug_screenshots_dir}")
+            screenshot_files = glob.glob(os.path.join(bug_screenshots_dir, "*.png"))
+            for file_path in screenshot_files:
+                try:
+                    os.remove(file_path)
+                    print(f"🗑️ Deleted: {file_path}")
+                except Exception as e:
+                    print(f"❌ Error deleting {file_path}: {e}")
+    
+    # Clean up annotated page screenshots - check multiple locations
+    server_dirs = [
+        os.getcwd(),  # Current directory
+        os.path.join(os.getcwd(), "server"),  # Server subdirectory
+        os.path.join(os.path.dirname(os.getcwd()), "server")  # Parent/server
+    ]
+    
+    for server_dir in server_dirs:
+        if os.path.exists(server_dir):
+            annotated_files = glob.glob(os.path.join(server_dir, "annotated_page_*.png"))
+            for file_path in annotated_files:
+                try:
+                    os.remove(file_path)
+                    print(f"🗑️ Deleted: {file_path}")
+                except Exception as e:
+                    print(f"❌ Error deleting {file_path}: {e}")
+
 # Define tool declarations for Gemini API
 click_element_function = {
     "name": "click_element",
@@ -228,12 +337,14 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
         # --- ROBUST INPUT PARSING LOGIC ---
         input_url = None
         test_cases = None
+        tester_user_id = None
 
         # Pattern 1: Data is a pre-parsed object with attributes (most likely case based on logs)
         if hasattr(request.data, 'url'):
             input_url = request.data.url
             # Use getattr for safety; it returns None if the attribute doesn't exist
             test_cases = getattr(request.data, 'test_cases', None)
+            tester_user_id = getattr(request.data, 'tester_user_id', None)
         
         # Pattern 2: Fallback for raw text/JSON payload
         elif hasattr(request.data, 'text'):
@@ -243,6 +354,7 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                     data_obj = json.loads(data_text)
                     input_url = data_obj.get('url')
                     test_cases = data_obj.get('test_cases')
+                    tester_user_id = data_obj.get('tester_user_id')
                 else:
                     input_url = data_text
             except json.JSONDecodeError:
@@ -256,6 +368,9 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
             return response.text("Could not determine the input URL from the request.")
 
         # --- END OF PARSING ---
+
+        print(f"Tester user ID: {tester_user_id}")
+
 
         success, message, browser_context = deterministic_browser_setup(input_url, context)
         if not success: return response.text(message)
@@ -278,7 +393,8 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                 initial_elements=initial_elements,
                 initial_screenshot_path=initial_screenshot_path,
                 context=context,
-                response=response
+                response=response,
+                tester_user_id=tester_user_id
             )
         # Otherwise, default to bug hunting mode.
         else:
@@ -289,7 +405,8 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                 initial_elements=initial_elements,
                 initial_screenshot_path=initial_screenshot_path,
                 context=context,
-                response=response
+                response=response,
+                tester_user_id=tester_user_id
             )
 
     except Exception as e:
@@ -304,13 +421,14 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
             except Exception as e:
                 context.logger.error(f"Error closing driver: {e}")
 
-async def execute_bug_hunting(browser_context, driver, initial_elements, initial_screenshot_path, context, response):
+async def execute_bug_hunting(browser_context, driver, initial_elements, initial_screenshot_path, context, response, tester_user_id=None):
     final_text_result, action_log = await run_agent_loop(
         task_prompt=BUG_HUNTING_PROMPT,
         driver=driver,
         initial_elements=initial_elements,
         initial_screenshot_path=initial_screenshot_path,
-        context=context
+        context=context,
+        tester_user_id=tester_user_id
     )
     
     # Try to parse the response as JSON bug reports
@@ -333,16 +451,21 @@ async def execute_bug_hunting(browser_context, driver, initial_elements, initial
                         except:
                             step['image_url'] = ""
             
+            # Clean up screenshots before returning
+            cleanup_screenshots()
             return response.json(bug_reports)
         else:
             # No JSON found, return empty array for successful testing
+            cleanup_screenshots()
             return response.json([])
     except Exception as e:
         context.logger.error(f"Error parsing bug reports: {e}")
+        # Clean up screenshots before returning error
+        cleanup_screenshots()
         # Fallback to text response
         return response.text(f"Error parsing bug reports: {str(e)}\n\nRaw response: {final_text_result}")
 
-async def execute_test_cases(test_cases, browser_context, driver, initial_elements, initial_screenshot_path, context, response):
+async def execute_test_cases(test_cases, browser_context, driver, initial_elements, initial_screenshot_path, context, response, tester_user_id=None):
     all_results = []
     overall_action_log = []
 
@@ -412,7 +535,8 @@ async def execute_test_cases(test_cases, browser_context, driver, initial_elemen
             driver=fresh_driver,
             initial_elements=fresh_initial_elements,
             initial_screenshot_path=fresh_initial_screenshot_path,
-            context=context
+            context=context,
+            tester_user_id=tester_user_id
         )
         
         all_results.append({
@@ -429,18 +553,40 @@ async def execute_test_cases(test_cases, browser_context, driver, initial_elemen
         except:
             pass
 
-    final_response = "### Test Case Execution Summary\n\n"
-    for res in all_results:
-        final_response += f"**Test Case {res['test_case']}: {res['objective']}**\n"
-        final_response += f"**Result:** {res['result']}\n\n"
+    # Parse results to extract bug reports
+    all_bug_reports = []
     
-    final_response += "---\n### Combined Action Log\n"
-    for i, log in enumerate(overall_action_log, 1):
-        final_response += f"{i}. {log}\n"
+    for res in all_results:
+        result_text = res['result']
+        
+        # Try to parse JSON from the result
+        try:
+            import re
+            json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
+            if json_match:
+                bug_report = json.loads(json_match.group())
+                if isinstance(bug_report, dict) and bug_report.get('title'):
+                    # Convert screenshot paths to base64
+                    bug_report = convert_screenshots_to_base64(bug_report)
+                    all_bug_reports.append(bug_report)
+            else:
+                # No JSON found - no bugs reported
+                continue
+        except (json.JSONDecodeError, KeyError):
+            # JSON parsing failed - no bugs reported
+            continue
+    
+    # Clean up screenshots before returning
+    cleanup_screenshots()
+    
+    # Return JSON response
+    if all_bug_reports:
+        return response.json(all_bug_reports)
+    else:
+        # No bugs found - return empty array
+        return response.json([])
 
-    return response.text(final_response)
-
-async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_screenshot_path: str, context: AgentContext):
+async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_screenshot_path: str, context: AgentContext, tester_user_id=None):
     # (This function is correct and remains unchanged)
     context.logger.info("🚀 Starting STATELESS agent loop...")
     
@@ -449,6 +595,10 @@ async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_scr
     current_screenshot_path = initial_screenshot_path
     
     max_turns = 10
+    malformed_call_count = 0
+    bug_number = 1
+    step_number = 1
+    
     for turn in range(max_turns):
         context.logger.info(f"--- Agent Turn {turn + 1}/{max_turns} ---")
         
@@ -459,7 +609,7 @@ async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_scr
             action_log.append(f"Failed to discover elements: {current_elements['error']}")
             continue
         
-        current_screenshot_path = take_annotated_screenshot(driver, current_elements)
+        current_screenshot_path = take_annotated_screenshot(driver, current_elements, bug_number=bug_number, step_number=step_number)
         if current_screenshot_path.startswith("Failed"):
             context.logger.error(f"Failed to take screenshot: {current_screenshot_path}")
             action_log.append(f"Failed to take screenshot: {current_screenshot_path}")
@@ -477,6 +627,12 @@ async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_scr
         Title: {driver.title}
         URL: {driver.current_url}
         Elements Discovered: { {k: len(v) for k, v in current_elements.items() if k != "error"} }
+        --- BUG TRACKING ---
+        Current bug number: {bug_number}
+        Current step number: {step_number}
+        Use image_url format: "bug_{bug_number}_step_{{step_number}}_screenshot"
+        --- USER INFORMATION ---
+        Reporter User ID: {tester_user_id or 'automation_agent'}
         --- YOUR INSTRUCTION ---
         Given the task, previous actions, and the current page state in the screenshot, decide the single next action to take using a tool. If the task is done, provide a final text answer.
         """
@@ -515,6 +671,10 @@ async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_scr
                 if response.candidates[0].finish_reason and "MALFORMED_FUNCTION_CALL" in str(response.candidates[0].finish_reason):
                     context.logger.error("Model made a malformed function call - continuing with next turn")
                     action_log.append("Model made a malformed function call - continuing with next turn")
+                    malformed_call_count += 1
+                    if malformed_call_count >= 3:
+                        context.logger.error("❌ Too many malformed function calls. Stopping agent loop.")
+                        return "Agent stopped due to repeated malformed function calls", action_log
                     continue  # Skip this turn and continue with the next one
                 return "Agent received response with no parts", action_log
             
@@ -523,7 +683,11 @@ async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_scr
         except Exception as e:
             context.logger.error(f"Error processing Gemini response: {e}")
             context.logger.error(f"Response object: {response if 'response' in locals() else 'No response'}")
-            return f"Agent encountered error processing model response: {str(e)}", action_log
+            malformed_call_count += 1
+            if malformed_call_count >= 3:
+                context.logger.error("❌ Too many malformed function calls. Stopping agent loop.")
+                return "Agent stopped due to repeated malformed function calls", action_log
+            continue
 
         # Check all parts for function calls first
         function_call_found = False
@@ -554,6 +718,8 @@ async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_scr
                             tool_output = tool_function(**tool_args)
                             context.logger.info(f"✅ Tool '{tool_name}' executed.")
                             action_log.append(f"Called tool `{tool_name}`. Result: {json.dumps(tool_output)}")
+                            malformed_call_count = 0  # Reset counter on successful tool call
+                            step_number += 1  # Increment step number after successful tool execution
 
                         except Exception as e:
                             context.logger.error(f"❌ Error executing tool '{tool_name}': {e}")

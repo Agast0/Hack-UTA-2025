@@ -3,7 +3,7 @@ Agent-specific routes for AI agent interactions
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Any
 import os
 import logging
 from agentuity_agents.my_agent.agent import run
@@ -28,7 +28,7 @@ class AgentRequestModel(BaseModel):
     test_cases: Optional[List[TestCase]] = None
 
 class AgentResponseModel(BaseModel):
-    response: str
+    response: Any
     success: bool
     error: Optional[str] = None
 
@@ -54,11 +54,12 @@ async def run_agent(request: AgentRequestModel):
                 
                 # Create a proper data object with both url and test_cases
                 class RequestData:
-                    def __init__(self, url, test_cases):
+                    def __init__(self, url, test_cases, tester_user_id):
                         self.url = url
                         self.test_cases = test_cases
+                        self.tester_user_id = tester_user_id
                 
-                self.data = RequestData(url, test_cases)
+                self.data = RequestData(url, test_cases, tester_user_id)
         
         class FastAPIResponse:
             def __init__(self):
@@ -68,8 +69,8 @@ async def run_agent(request: AgentRequestModel):
                 self._response = response_text
                 return self
             
-            def json(self, data: dict):
-                self._response = str(data)
+            def json(self, data):
+                self._response = data
                 return self
             
             def get_response(self):

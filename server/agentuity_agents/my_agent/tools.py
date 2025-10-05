@@ -364,7 +364,7 @@ def get_color_for_type(element_type: str) -> str:
     return colors.get(element_type, "gray")
 
 
-def take_annotated_screenshot(driver: webdriver.Chrome, elements: dict, filename: str = None) -> str:
+def take_annotated_screenshot(driver: webdriver.Chrome, elements: dict, filename: str = None, bug_number: int = None, step_number: int = None) -> str:
     """
     Take a screenshot with visual element annotations.
     
@@ -372,6 +372,8 @@ def take_annotated_screenshot(driver: webdriver.Chrome, elements: dict, filename
         driver (webdriver.Chrome): The Chrome driver instance
         elements (dict): Dictionary of discovered elements
         filename (str, optional): Custom filename for the screenshot
+        bug_number (int, optional): Bug number for deterministic naming
+        step_number (int, optional): Step number for deterministic naming
         
     Returns:
         str: Path to the saved screenshot
@@ -386,14 +388,25 @@ def take_annotated_screenshot(driver: webdriver.Chrome, elements: dict, filename
         
         # Generate filename if not provided
         if not filename:
-            import time
-            timestamp = int(time.time())
-            filename = f"annotated_page_{timestamp}.png"
+            if bug_number is not None and step_number is not None:
+                # Use deterministic naming for bug screenshots
+                filename = f"bug_{bug_number}_step_{step_number}_screenshot.png"
+            else:
+                # Fallback to timestamp for non-bug screenshots
+                timestamp = int(time.time())
+                filename = f"annotated_page_{timestamp}.png"
         
-        # Save to current directory instead of /tmp for easier access
+        # Create bug screenshots directory if using deterministic naming
         import os
-        current_dir = os.getcwd()
-        screenshot_path = os.path.join(current_dir, filename)
+        if bug_number is not None and step_number is not None:
+            current_dir = os.getcwd()
+            bug_screenshots_dir = os.path.join(current_dir, "bug_screenshots")
+            os.makedirs(bug_screenshots_dir, exist_ok=True)
+            screenshot_path = os.path.join(bug_screenshots_dir, filename)
+        else:
+            # Save to current directory for non-bug screenshots
+            current_dir = os.getcwd()
+            screenshot_path = os.path.join(current_dir, filename)
         
         # Take screenshot
         driver.save_screenshot(screenshot_path)
