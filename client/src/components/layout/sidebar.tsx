@@ -99,7 +99,10 @@ export function Sidebar() {
           <h2 className="text-lg font-semibold text-foreground">Teams</h2>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="h-8">
+              <Button
+                size="sm"
+                className="h-8 px-3 rounded-full transition-all duration-200 shadow-sm hover:-translate-y-1 hover:shadow-lg hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-primary/50"
+              >
                 <Plus className="h-4 w-4 mr-1" />
                 Create Team
               </Button>

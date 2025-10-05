@@ -2,7 +2,7 @@
 
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, Check } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,11 +12,12 @@ import {
 import { useEffect, useState } from "react";
 
 export function ThemeMenu() {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme, theme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const isDark = mounted && resolvedTheme === "dark";
+  const activeTheme = mounted ? theme ?? "system" : "system";
 
   return (
     <DropdownMenu>
@@ -30,10 +31,37 @@ export function ThemeMenu() {
           {isDark ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-28">
-        <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
+      <DropdownMenuContent align="end" className="w-32">
+        <DropdownMenuItem
+          onClick={() => setTheme("light")}
+          className="flex items-center justify-between"
+        >
+          <span>Light</span>
+          <Check
+            aria-hidden="true"
+            className={`h-4 w-4 transition-opacity ${activeTheme === "light" ? "opacity-100" : "opacity-0"}`}
+          />
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setTheme("dark")}
+          className="flex items-center justify-between"
+        >
+          <span>Dark</span>
+          <Check
+            aria-hidden="true"
+            className={`h-4 w-4 transition-opacity ${activeTheme === "dark" ? "opacity-100" : "opacity-0"}`}
+          />
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setTheme("system")}
+          className="flex items-center justify-between"
+        >
+          <span>System</span>
+          <Check
+            aria-hidden="true"
+            className={`h-4 w-4 transition-opacity ${activeTheme === "system" ? "opacity-100" : "opacity-0"}`}
+          />
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
