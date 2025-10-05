@@ -14,6 +14,7 @@ export const BugFindingSchema = z.object({
     image_url: z.string(),
   })),
   status: z.enum(['pending', 'confirmed', 'rejected']).default('pending'),
+  isEditing: z.boolean().optional().default(false),
 });
 
 export type BugFinding = z.infer<typeof BugFindingSchema>;

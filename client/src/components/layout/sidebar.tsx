@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Users, Shield, MoreHorizontal, Trash2, UserPlus, X, Pencil } from 'lucide-react';
+import { Plus, Users, Shield, MoreHorizontal, Trash2, UserPlus, X, Pencil, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,8 +27,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTeamStore } from '@/lib/store';
 import { Team } from '@/types/bug';
+import { useRouter } from 'next/navigation';
 
 export function Sidebar() {
+  const router = useRouter();
   const { teams, selectedTeamId, setSelectedTeam, addTeam, deleteTeam, addUserToTeam, removeUserFromTeam, getAvailableUsers, renameTeam } = useTeamStore();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -274,6 +276,46 @@ export function Sidebar() {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Confirmed Bugs Section */}
+      <div className="p-6 border-t border-border">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-foreground">Confirmed Bugs</h2>
+          <Badge variant="secondary" className="text-xs">
+            0 bugs
+          </Badge>
+        </div>
+        
+        <div className="space-y-1.5">
+          <Card
+            onClick={() => {
+              router.push('/confirmed-bugs');
+            }}
+            className="group transition-all hover:shadow-md py-2 gap-1 cursor-pointer hover:bg-accent"
+          >
+            <CardHeader className="pb-1 px-3 gap-0.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5 flex-1">
+                  <div className="bg-primary/10 rounded-lg p-1">
+                    <Bug className="h-4 w-4 text-primary" />
+                  </div>
+                  <CardTitle className="text-sm font-medium">
+                    All Confirmed Bugs
+                  </CardTitle>
+                </div>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">
+                  0 bugs
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0 px-3 py-0.5">
+              <p className="text-xs text-muted-foreground">
+                View and manage all confirmed bug reports
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Delete Confirmation Dialog */}

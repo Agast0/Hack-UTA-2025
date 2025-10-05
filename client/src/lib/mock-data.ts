@@ -103,12 +103,13 @@ export const mockBugFindings: BugFinding[] = [
       },
     ],
     status: 'pending',
+    isEditing: false,
   },
   {
     id: 'bug-2',
     title: 'XSS in Search Function',
     description: 'The search functionality is vulnerable to cross-site scripting attacks.',
-    roast: getRoastMessage('high'),
+    roast: 'This search is so vulnerable, it might as well be a public bulletin board. Anyone can post whatever they want, including malicious scripts. It\'s like having a security guard who just waves everyone through with a smile.',
     reproduction_steps: [
       {
         step_number: 1,
@@ -131,13 +132,14 @@ export const mockBugFindings: BugFinding[] = [
         image_url: 'https://via.placeholder.com/400x300/ff8800/ffffff?text=Step+4',
       },
     ],
-    status: 'pending',
+    status: 'confirmed',
+    isEditing: false,
   },
   {
     id: 'bug-3',
     title: 'Missing CSRF Protection',
     description: 'Forms are missing CSRF tokens, making them vulnerable to cross-site request forgery.',
-    roast: getRoastMessage('medium'),
+    roast: 'These forms are so trusting, they\'d accept a request from anyone. It\'s like having a bank that doesn\'t verify your identity - just walk in and take whatever you want!',
     reproduction_steps: [
       {
         step_number: 1,
@@ -160,13 +162,14 @@ export const mockBugFindings: BugFinding[] = [
         image_url: 'https://via.placeholder.com/400x300/ffff00/000000?text=Step+4',
       },
     ],
-    status: 'pending',
+    status: 'confirmed',
+    isEditing: false,
   },
   {
     id: 'bug-4',
     title: 'Weak Password Policy',
     description: 'The application accepts weak passwords without proper validation.',
-    roast: getRoastMessage('low'),
+    roast: 'This password policy is so weak, it\'s practically non-existent. "123" is considered a strong password here. It\'s like having a security system that accepts "password" as the master key.',
     reproduction_steps: [
       {
         step_number: 1,
@@ -189,7 +192,68 @@ export const mockBugFindings: BugFinding[] = [
         image_url: 'https://via.placeholder.com/400x300/00ff00/000000?text=Step+4',
       },
     ],
-    status: 'pending',
+    status: 'confirmed',
+    isEditing: false,
+  },
+  {
+    id: 'bug-5',
+    title: 'SQL Injection in User Profile',
+    description: 'The user profile update functionality is vulnerable to SQL injection attacks.',
+    roast: 'This profile update is so vulnerable, it\'s like having a database that accepts any SQL command. "UPDATE users SET admin=1" would probably work here. It\'s like giving everyone the keys to the database kingdom.',
+    reproduction_steps: [
+      {
+        step_number: 1,
+        text: 'Login to the application',
+        image_url: 'https://via.placeholder.com/400x300/ff0000/ffffff?text=Step+1',
+      },
+      {
+        step_number: 2,
+        text: 'Navigate to profile settings',
+        image_url: 'https://via.placeholder.com/400x300/ff0000/ffffff?text=Step+2',
+      },
+      {
+        step_number: 3,
+        text: 'Enter "admin\'; DROP TABLE users; --" in the name field',
+        image_url: 'https://via.placeholder.com/400x300/ff0000/ffffff?text=Step+3',
+      },
+      {
+        step_number: 4,
+        text: 'Submit the form and observe the error',
+        image_url: 'https://via.placeholder.com/400x300/ff0000/ffffff?text=Step+4',
+      },
+    ],
+    status: 'confirmed',
+    isEditing: false,
+  },
+  {
+    id: 'bug-6',
+    title: 'Session Fixation Vulnerability',
+    description: 'The application does not regenerate session IDs after login, making it vulnerable to session fixation attacks.',
+    roast: 'This session management is so predictable, it\'s like having a lock that never changes its combination. Once someone knows your session ID, they can use it forever. It\'s like having a house key that never expires.',
+    reproduction_steps: [
+      {
+        step_number: 1,
+        text: 'Open the application in a browser',
+        image_url: 'https://via.placeholder.com/400x300/800080/ffffff?text=Step+1',
+      },
+      {
+        step_number: 2,
+        text: 'Note the current session ID from cookies',
+        image_url: 'https://via.placeholder.com/400x300/800080/ffffff?text=Step+2',
+      },
+      {
+        step_number: 3,
+        text: 'Login to the application',
+        image_url: 'https://via.placeholder.com/400x300/800080/ffffff?text=Step+3',
+      },
+      {
+        step_number: 4,
+        text: 'Check if the session ID remains the same',
+        image_url: 'https://via.placeholder.com/400x300/800080/ffffff?text=Step+4',
+      },
+    ],
+    status: 'confirmed',
+    isEditing: false,
   },
 ];
 

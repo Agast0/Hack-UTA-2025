@@ -20,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { useTeamStore, useRunsStore } from '@/lib/store';
 import { mockAgentRuns, mockUsers } from '@/lib/mock-data';
@@ -191,7 +192,7 @@ export function MainContent() {
   const [createdAudits, setCreatedAudits] = useState<AgentRun[]>([]);
 
   const selectedTeam = teams.find(team => team.id === selectedTeamId);
-  const teamRuns = selectedTeamId 
+  const teamRuns = selectedTeamId
     ? runs.filter((run) => run.teamId === selectedTeamId)
     : [];
 
@@ -199,6 +200,7 @@ export function MainContent() {
   const allAudits = [...teamRuns, ...createdAudits];
   const runningAudits = allAudits.filter((run) => run.status === 'running');
   const completedAudits = allAudits.filter((run) => run.status === 'completed' || run.status === 'failed');
+  
 
   const addTestCase = () => {
     const newTestCase = {
@@ -466,7 +468,6 @@ export function MainContent() {
         </div>
 
         <div className="space-y-6">
-
           {/* Running Audits Section */}
           <Card>
             <CardHeader>
