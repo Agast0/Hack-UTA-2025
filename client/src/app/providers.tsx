@@ -5,9 +5,18 @@ import { Auth0Provider } from '@auth0/auth0-react';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { useState } from 'react';
+import { useEffect } from 'react';
+import { useUiStore } from '@/lib/store';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
+  const mlgMode = useUiStore((s) => s.mlgMode);
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const html = document.documentElement;
+      html.setAttribute('data-mlg', mlgMode ? 'true' : 'false');
+    }
+  }, [mlgMode]);
 
   return (
     <Auth0Provider

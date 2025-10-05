@@ -25,6 +25,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Toggle html data attribute based on persisted UI store in a client effect
   return (
     <html lang="en" suppressHydrationWarning>
       <body

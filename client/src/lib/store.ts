@@ -3,6 +3,12 @@ import { persist } from 'zustand/middleware';
 import { User, Team, AgentRun } from '@/types/bug';
 import { mockUser, mockTeams, mockUsers, mockAgentRuns } from './mock-data';
 
+interface UiState {
+  mlgMode: boolean;
+  toggleMlgMode: () => void;
+  setMlgMode: (value: boolean) => void;
+}
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
@@ -42,6 +48,17 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
     }
+  )
+);
+
+export const useUiStore = create<UiState>()(
+  persist(
+    (set, get) => ({
+      mlgMode: false,
+      toggleMlgMode: () => set({ mlgMode: !get().mlgMode }),
+      setMlgMode: (value: boolean) => set({ mlgMode: value }),
+    }),
+    { name: 'ui-storage' }
   )
 );
 

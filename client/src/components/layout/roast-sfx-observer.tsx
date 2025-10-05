@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useUiStore } from '@/lib/store';
 
 const SFX_PATHS = [
   '/roastsfx/airhorn.mp3',
@@ -10,9 +11,13 @@ const SFX_PATHS = [
   '/roastsfx/wow-mlg-sound-effect.mp3',
   '/roastsfx/NEVER_DONE_THAT.mp3',
   '/roastsfx/SANIC.mp3',
+  '/roastsfx/AND_HIS_NAME_IS_JOHN_CENA.mp3',
+  '/roastsfx/tactical-nuke.mp3',
+  '/roastsfx/mlg-gun-shot-sound-effect.mp3',
 ];
 
 export function RoastSfxObserver() {
+  const mlgMode = useUiStore((s) => s.mlgMode);
   const remainingRef = useRef<string[]>([]);
   const initializedRef = useRef(false);
   const triggeredOnceRef = useRef<WeakSet<Element>>(new WeakSet());
@@ -82,20 +87,34 @@ export function RoastSfxObserver() {
       return observer;
     };
 
+    if (!mlgMode) return; // disable when MLG mode is off
+    // MLG just turned ON: clear the per-element guard so previously viewed roasts can play now
+    triggeredOnceRef.current = new WeakSet<Element>();
     let observer = attach();
 
     // Observe DOM changes to catch dynamically added roast blocks
     const mo = new MutationObserver(() => {
+      // Re-attach the intersection observers to include any newly added roast elements
       if (observer) observer.disconnect();
       observer = attach();
+
+      // If any menu/dialog just opened, allow roasts within it to play once again
+      const openContainers = document.querySelectorAll('[data-state="open"], [role="dialog"][data-state="open"]');
+      openContainers.forEach((container) => {
+        const roasts = container.querySelectorAll('.roast-trigger');
+        roasts.forEach((el) => {
+          // Reset the one-shot guard so a reopen permits one more play
+          triggeredOnceRef.current.delete(el);
+        });
+      });
     });
-    mo.observe(document.body, { childList: true, subtree: true });
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true });
 
     return () => {
       if (observer) observer.disconnect();
       mo.disconnect();
     };
-  }, []);
+  }, [mlgMode]);
 
   return null;
 }
