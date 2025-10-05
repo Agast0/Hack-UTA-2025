@@ -11,7 +11,7 @@ from routes.system import router as system_router
 from routes.health import router as health_router
 from routes.agent import router as agent_router
 from main import app as core_app
-from models import User, BugReport, Team
+from models import User, BugReport, Team, TestCase, BugFinding, AgentRun
 
 # Load environment variables from .env file
 load_dotenv()
@@ -53,9 +53,10 @@ async def startup_db_client():
         )
         exit(1)
     client = AsyncIOMotorClient(mongo_uri)
-    # Add the BugReport and Team models to the list for Beanie initialization
+    # Initialize Beanie with all document models used by the app
     await init_beanie(
-        database=client[db_name], document_models=[User, BugReport, Team]
+        database=client[db_name],
+        document_models=[User, Team, BugReport, TestCase, BugFinding, AgentRun],
     )
     print('MongoDB connection established successfully!')
 
