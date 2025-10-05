@@ -339,12 +339,13 @@ async def execute_test_cases(test_cases, browser_context, driver, initial_elemen
     for i, test_case in enumerate(test_cases_as_dicts, 1):
         context.logger.info(f"--- Running Test Case {i}/{len(test_cases_as_dicts)}: {test_case.get('what_to_test')} ---")
         
-        # Close the current driver and start fresh for each test case
-        try:
-            driver.quit()
-            context.logger.info("Closed previous browser instance")
-        except:
-            pass
+        # Close the current driver and start fresh for each test case (skip first iteration)
+        if i > 1:
+            try:
+                driver.quit()
+                context.logger.info("Closed previous browser instance")
+            except:
+                pass
         
         # Setup fresh browser for this test case
         success, message, fresh_browser_context = deterministic_browser_setup(original_url, context)
@@ -429,6 +430,19 @@ async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_scr
     max_turns = 10
     for turn in range(max_turns):
         context.logger.info(f"--- Agent Turn {turn + 1}/{max_turns} ---")
+        
+        # Rediscover elements at the start of each turn to get current page state
+        current_elements = discover_page_elements(driver)
+        if "error" in current_elements:
+            context.logger.error(f"Failed to discover elements: {current_elements['error']}")
+            action_log.append(f"Failed to discover elements: {current_elements['error']}")
+            continue
+        
+        current_screenshot_path = take_annotated_screenshot(driver, current_elements)
+        if current_screenshot_path.startswith("Failed"):
+            context.logger.error(f"Failed to take screenshot: {current_screenshot_path}")
+            action_log.append(f"Failed to take screenshot: {current_screenshot_path}")
+            continue
 
         formatted_action_log = "\n".join(f"- {action}" for action in action_log) or "No actions taken yet."
 
@@ -483,43 +497,65 @@ async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_scr
                     continue  # Skip this turn and continue with the next one
                 return "Agent received response with no parts", action_log
             
-            part = response.candidates[0].content.parts[0]
+            parts = response.candidates[0].content.parts
             
         except Exception as e:
             context.logger.error(f"Error processing Gemini response: {e}")
             context.logger.error(f"Response object: {response if 'response' in locals() else 'No response'}")
             return f"Agent encountered error processing model response: {str(e)}", action_log
 
-        if hasattr(part, 'function_call') and part.function_call:
-            function_call = part.function_call
-            tool_name = function_call.name
-            tool_args = dict(function_call.args)
-            
-            context.logger.info(f"🤖 Agent requests tool: {tool_name}({tool_args})")
-            
-            if tool_name in AVAILABLE_TOOLS:
-                tool_function = AVAILABLE_TOOLS[tool_name]
-                tool_args.update({'driver': driver, 'elements': current_elements})
-                
-                try:
-                    tool_output = tool_function(**tool_args)
-                    context.logger.info(f"✅ Tool '{tool_name}' executed.")
-                    action_log.append(f"Called tool `{tool_name}`. Result: {json.dumps(tool_output)}")
+        # Check all parts for function calls first
+        function_call_found = False
+        for part in parts:
+            if hasattr(part, 'function_call') and part.function_call:
+                function_call_found = True
+                break
+        
+        if function_call_found:
+            # Find the part with the function call
+            for part in parts:
+                if hasattr(part, 'function_call') and part.function_call:
+                    function_call = part.function_call
+                    tool_name = function_call.name
+                    tool_args = dict(function_call.args)
+                    
+                    context.logger.info(f"🤖 Agent requests tool: {tool_name}({tool_args})")
+                    
+                    if tool_name in AVAILABLE_TOOLS:
+                        tool_function = AVAILABLE_TOOLS[tool_name]
+                        tool_args.update({'driver': driver})
+                        
+                        # Only add elements parameter to tools that need it
+                        if tool_name in ['click_element', 'fill_input_field', 'extract_element_info']:
+                            tool_args.update({'elements': current_elements})
+                        
+                        try:
+                            tool_output = tool_function(**tool_args)
+                            context.logger.info(f"✅ Tool '{tool_name}' executed.")
+                            action_log.append(f"Called tool `{tool_name}`. Result: {json.dumps(tool_output)}")
 
-                    current_elements = discover_page_elements(driver)
-                    current_screenshot_path = take_annotated_screenshot(driver, current_elements)
-
-                except Exception as e:
-                    context.logger.error(f"❌ Error executing tool '{tool_name}': {e}")
-                    action_log.append(f"Error executing `{tool_name}`: {e}")
-            else:
-                context.logger.error(f"Model requested a non-existent tool: '{tool_name}'")
-                action_log.append(f"Attempted to call unknown tool `{tool_name}`.")
+                        except Exception as e:
+                            context.logger.error(f"❌ Error executing tool '{tool_name}': {e}")
+                            action_log.append(f"Error executing `{tool_name}`: {e}")
+                    else:
+                        context.logger.error(f"Model requested a non-existent tool: '{tool_name}'")
+                        action_log.append(f"Attempted to call unknown tool `{tool_name}`.")
+                    break  # Only process the first function call
         else:
-            final_text = part.text
-            context.logger.info(f"🏁 Agent finished loop with final text response.")
-            action_log.append(f"Agent provided final summary: {final_text}")
-            return final_text, action_log
+            # No function call found, look for text in any part
+            final_text = ""
+            for part in parts:
+                if hasattr(part, 'text') and part.text:
+                    final_text += part.text + "\n"
+            
+            if final_text.strip():
+                context.logger.info(f"🏁 Agent finished loop with final text response.")
+                action_log.append(f"Agent provided final summary: {final_text.strip()}")
+                return final_text.strip(), action_log
+            else:
+                context.logger.warning("Agent provided no text or function call")
+                action_log.append("Agent provided no text or function call")
+                return "Agent provided no response", action_log
             
     final_text = "Agent reached the maximum number of turns without providing a final summary."
     context.logger.warning(final_text)
