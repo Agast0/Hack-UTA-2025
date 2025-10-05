@@ -1,0 +1,52 @@
+# Server-specific gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Logs
+*.log
+logs/
+
+# Test files
+test_*.py
+*_test.py
+tests/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# API keys and secrets
+*.key
+*.pem
+secrets/
+
+# Agentuity specific
+.agentuity/
+agentuity-crash-*.json
