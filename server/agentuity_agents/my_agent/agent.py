@@ -3,7 +3,7 @@ from google import genai
 import os
 
 # Import from separated modules
-from agentuity_agents.my_agent.system_prompt import SYSTEM_PROMPT, AGENT_CONFIG, ERROR_MESSAGES, SUCCESS_MESSAGES
+from agentuity_agents.my_agent.prompts.system_prompt import SYSTEM_PROMPT, AGENT_CONFIG, ERROR_MESSAGES, SUCCESS_MESSAGES
 from agentuity_agents.my_agent.tools import (
     validate_url, setup_chrome_driver, navigate_to_url, discover_page_elements, 
     take_annotated_screenshot, remove_annotations, click_element, scroll_page, 
@@ -48,51 +48,52 @@ def deterministic_browser_setup(input_url: str, context: AgentContext) -> tuple[
     try:
         context.logger.info(f"Starting deterministic browser setup for: {input_url}")
         
-        # Step 1: Validate URL (deterministic)
-        if not input_url:
-            return False, ERROR_MESSAGES["no_url"], {}
-        
+        # Step 1: Validate URL
         is_valid, error_msg = validate_url(input_url)
         if not is_valid:
-            context.logger.error(f"URL validation failed: {error_msg}")
-            return False, ERROR_MESSAGES["invalid_url"].format(error_msg=error_msg), {}
+            return False, f"{ERROR_MESSAGES['invalid_url']}\n\n{error_msg}", {}
         
         # Add protocol if missing
         if not input_url.startswith(('http://', 'https://')):
             input_url = 'https://' + input_url
         
-        context.logger.info(f"URL validated: {input_url}")
+        context.logger.info(f"URL validation successful: {input_url}")
         
-        # Step 2: Setup browser (deterministic)
-        # Check if we should keep browser open for dev inspection
-        keep_browser_open = os.getenv("KEEP_BROWSER_OPEN", "false").lower() in ("true", "1", "yes")
-        context.logger.info(f"Setting up Chrome driver... (keep_open: {keep_browser_open})")
-        driver = setup_chrome_driver(keep_open=keep_browser_open)
+        # Step 2: Setup Chrome driver
+        try:
+            driver = setup_chrome_driver()
+        except Exception as e:
+            return False, f"{ERROR_MESSAGES['driver_setup_failed']}\n\n{str(e)}", {}
+        context.logger.info("Chrome driver setup successful")
         
-        # Step 3: Navigate to URL (deterministic)
-        context.logger.info(f"Navigating to: {input_url}")
-        page_info = navigate_to_url(driver, input_url)
+        # Step 3: Navigate to URL
+        navigation_result = navigate_to_url(driver, input_url)
+        if navigation_result.get('status') != 'success':
+            return False, f"{ERROR_MESSAGES['navigation_failed']}\n\n{navigation_result.get('error', 'Unknown navigation error')}", {}
         
-        context.logger.info(f"Successfully loaded page: {page_info['title']}")
+        context.logger.info(f"Navigation successful: {navigation_result['current_url']}")
         
-        # Return browser context for the agent
-        browser_context = {
-            "driver": driver,
-            "page_info": page_info,
-            "input_url": input_url,
-            "current_url": page_info["current_url"],
-            "page_title": page_info["title"],
-            "page_source_length": page_info["source_length"],
-            "keep_open": keep_browser_open
+        # Step 4: Get page information
+        page_info = {
+            'url': navigation_result['current_url'],
+            'title': navigation_result.get('title', 'Unknown'),
+            'source_length': navigation_result.get('source_length', 0),
+            'scroll_info': navigation_result.get('scroll_info', {}),
+            'tester_user_id': getattr(context, 'tester_user_id', None)
         }
         
-        return True, "Browser setup completed successfully", browser_context
+        # Return success with browser context
+        return True, SUCCESS_MESSAGES['navigation_success'], {
+            'driver': driver,
+            'current_url': navigation_result['current_url'],
+            'page_title': page_info['title'],
+            'page_source_length': page_info['source_length'],
+            'page_info': page_info,
+            'keep_open': os.getenv('KEEP_BROWSER_OPEN', 'false').lower() == 'true'
+        }
         
     except Exception as e:
-        context.logger.error(f"Error in deterministic browser setup: {e}")
-        import traceback
-        context.logger.error(f"Full traceback: {traceback.format_exc()}")
-        
+        context.logger.error(f"Browser setup failed: {e}")
         if driver:
             try:
                 driver.quit()
@@ -108,8 +109,10 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
     First does deterministic browser setup, then LLM agent takes over.
     """
     try:
-        # Get the input text (URL) - handle both FastAPI and Agentuity dynamically
+        # Get the input data - handle both FastAPI and Agentuity dynamically
         input_url = None
+        tester_user_id = None
+        test_cases = None
         
         # Try different data access patterns
         try:
@@ -121,6 +124,8 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                     import json
                     data_obj = json.loads(data_text)
                     input_url = data_obj.get('url', data_text)
+                    tester_user_id = data_obj.get('tester_user_id')
+                    test_cases = data_obj.get('test_cases')
                 else:
                     input_url = data_text
         except:
@@ -128,13 +133,21 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
             
         if not input_url:
             try:
-                # Pattern 2: FastAPI style - request.data directly
-                if hasattr(request.data, 'url'):
+                # Pattern 2: FastAPI style - request attributes directly
+                if hasattr(request, 'url'):
+                    input_url = request.url
+                    tester_user_id = getattr(request, 'tester_user_id', None)
+                    test_cases = getattr(request, 'test_cases', None)
+                elif hasattr(request.data, 'url'):
                     input_url = request.data.url
+                    tester_user_id = getattr(request.data, 'tester_user_id', None)
+                    test_cases = getattr(request.data, 'test_cases', None)
                 elif isinstance(request.data, str):
                     input_url = request.data
                 elif hasattr(request.data, 'get'):
                     input_url = request.data.get('url', request.data)
+                    tester_user_id = request.data.get('tester_user_id')
+                    test_cases = request.data.get('test_cases')
             except:
                 pass
                 
@@ -145,12 +158,18 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                     import json
                     data_obj = json.loads(request.data)
                     input_url = data_obj.get('url', request.data)
+                    tester_user_id = data_obj.get('tester_user_id')
+                    test_cases = data_obj.get('test_cases')
             except:
                 pass
                 
         if not input_url:
             # Pattern 4: Final fallback
             input_url = str(request.data)
+        
+        # Validate required fields
+        if not tester_user_id:
+            return response.text("❌ Error: tester_user_id is required but not provided.")
         
         # STEP 1: Deterministic browser setup (no LLM involved)
         success, message, browser_context = deterministic_browser_setup(input_url, context)
@@ -162,9 +181,22 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
         driver = browser_context["driver"]
         page_info = browser_context["page_info"]
         
+        # Debug: Check if browser is still alive
+        try:
+            current_url = driver.current_url
+            context.logger.info(f"Browser is alive, current URL: {current_url}")
+        except Exception as e:
+            context.logger.error(f"Browser appears to be closed: {e}")
+            return response.text("❌ Browser closed unexpectedly during setup")
+        
         # STEP 3: Discover and annotate page elements
         context.logger.info("Discovering page elements...")
-        elements = discover_page_elements(driver)
+        try:
+            elements = discover_page_elements(driver)
+            context.logger.info(f"Element discovery completed. Found {len(elements.get('elements', {}))} elements")
+        except Exception as e:
+            context.logger.error(f"Element discovery failed with exception: {e}")
+            return response.text(f"❌ Failed to discover page elements: {str(e)}")
         
         if "error" in elements:
             context.logger.error(f"Element discovery failed: {elements['error']}")
@@ -229,269 +261,43 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
         else:
             scroll_status = "📊 **Scroll Status**: Unable to determine scroll position"
         
-        # Generate AI response using the system prompt
-        prompt = f"""
-        {SYSTEM_PROMPT}
+        # Import the appropriate prompt based on mode
+        if test_cases and len(test_cases) > 0:
+            # Test case mode - we'll run the agent multiple times
+            from agentuity_agents.my_agent.prompts.test_case_prompt import TEST_CASE_PROMPT
+            base_prompt = TEST_CASE_PROMPT
+            mode = "test_cases"
+        else:
+            # General bug hunting mode
+            from agentuity_agents.my_agent.prompts.bug_hunting_prompt import BUG_HUNTING_PROMPT
+            base_prompt = BUG_HUNTING_PROMPT
+            mode = "bug_hunting"
         
-        Browser Status: Successfully opened and navigated
-        Current Page: {browser_context['page_title']}
-        URL: {browser_context['current_url']}
-        Page Size: {browser_context['page_source_length']} characters
-        
-        {scroll_status}
-        
-        Discovered Interactive Elements:
-        - Buttons: {element_counts['buttons']} (labeled as button_1, button_2, etc.)
-        - Inputs: {element_counts['inputs']} (labeled as input_1, input_2, etc.)
-        - Links: {element_counts['links']} (labeled as link_1, link_2, etc.)
-        - Selects: {element_counts['selects']} (labeled as select_1, select_2, etc.)
-        - Textareas: {element_counts['textareas']} (labeled as textarea_1, textarea_2, etc.)
-        
-        An annotated screenshot has been created showing all interactive elements with colored boxes and labels.
-        Available Browser Tools:
-        - click_element(element_label): Click on discovered elements (e.g., "link_1", "button_2")
-        - scroll_page(direction, amount): Scroll page ("down", "up", "left", "right")
-        - extract_element_info(element_label): Get detailed info about elements
-        
-        Your task is to find and navigate to the login page. Analyze the current page for login-related elements and use the available tools to navigate there.
-        """
-        
-        # Start the iterative loop for finding login page
-        max_iterations = 5
-        current_iteration = 0
-        goal_achieved = False
-        ai_response = ""
-        
-        # Action tracking for bug reproduction
-        action_log = []
-        action_log.append(f"1. Navigate to: {browser_context['current_url']}")
-        action_log.append(f"2. Page loaded: '{browser_context['page_title']}'")
-        
-        while current_iteration < max_iterations and not goal_achieved:
-            current_iteration += 1
-            print(f"\n🔄 ITERATION {current_iteration}/{max_iterations}")
-            print("="*60)
-            
-            # Generate AI response with screenshot
-            import base64
-            
-            # Read the screenshot file and encode it
-            screenshot_path_clean = screenshot_path.split(" (Size:")[0]  # Remove size info
-            try:
-                with open(screenshot_path_clean, "rb") as image_file:
-                    image_data = base64.b64encode(image_file.read()).decode('utf-8')
-            except Exception as e:
-                print(f"Warning: Could not load screenshot: {e}")
-                image_data = None
-            
-            # Create the prompt with both text and image
-            if image_data:
-                # Use the correct format for Google Gemini API based on docs
-                # The API expects a list with text and image parts
-                contents = [
-                    {
-                        "parts": [
-                            {
-                                "text": prompt + f"\n\nLook at the annotated screenshot below. The colored boxes show all interactive elements with their labels. Look for elements that might be login-related (buttons, links, or text that contains 'login', 'sign in', 'auth', etc.).\n\nIteration {current_iteration}: Analyze the current page and determine your next action."
-                            },
-                            {
-                                "inline_data": {
-                                    "mime_type": "image/png",
-                                    "data": image_data
-                                }
-                            }
-                        ]
-                    }
-                ]
-            else:
-                # Fallback to text-only if image can't be loaded
-                contents = [
-                    {
-                        "parts": [
-                            {
-                                "text": prompt + f"\n\nIteration {current_iteration}: Analyze the current page and determine your next action."
-                            }
-                        ]
-                    }
-                ]
-            
-            # Generate AI response
-            result = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=contents
-            )
-            
-            # Get AI response and format it nicely
-            ai_response = result.text
-            
-            # Clean up the AI response formatting
-            print("\n" + "="*80)
-            print("🤖 LLM THINKING PROCESS")
-            print("="*80)
-            print(ai_response)
-            print("="*80)
-            
-            # Simple tool execution based on AI response
-            tool_actions = []
-            page_changed = False
-            
-            # Look for tool usage in the AI response
-            if "click_element" in ai_response.lower() or "click" in ai_response.lower():
-                # Extract element label from response (simple pattern matching)
-                import re
-                element_matches = re.findall(r'(link_\d+|button_\d+|input_\d+)', ai_response)
-                if element_matches:
-                    element_label = element_matches[0]
-                    print(f"\n🖱️ EXECUTING: Clicking {element_label}")
-                    
-                    # Log the action for bug reproduction
-                    action_log.append(f"{len(action_log) + 1}. Click on element: {element_label}")
-                    
-                    click_result = click_element(driver, element_label, elements)
-                    tool_actions.append(f"🖱️ Clicked {element_label}: {click_result.get('message', 'Success')}")
-                    
-                    # Update page info after click
-                    if click_result.get('success'):
-                        browser_context['page_info'].update(click_result.get('new_page_info', {}))
-                        page_changed = True
-                        
-                        # Log the page change
-                        new_url = click_result.get('new_page_info', {}).get('current_url', '')
-                        new_title = click_result.get('new_page_info', {}).get('title', '')
-                        action_log.append(f"{len(action_log) + 1}. Page changed to: '{new_title}' ({new_url})")
-                        
-                        # Check if we've reached a login page
-                        if any(keyword in new_url.lower() or keyword in new_title.lower() 
-                               for keyword in ['login', 'signin', 'auth', 'sign-in', 'log-in']):
-                            goal_achieved = True
-                            print(f"\n🎯 GOAL ACHIEVED! Found login page: {new_title}")
-                            action_log.append(f"{len(action_log) + 1}. ✅ SUCCESS: Reached login page")
-                            
-                            # Take final screenshot of the login page
-                            print(f"\n📸 Taking final screenshot of login page...")
-                            final_elements = discover_page_elements(driver)
-                            if "error" not in final_elements:
-                                final_screenshot = take_annotated_screenshot(driver, final_elements)
-                                print(f"📸 Final login page screenshot: {final_screenshot}")
-                                action_log.append(f"{len(action_log) + 1}. Screenshot saved: {final_screenshot}")
-                            else:
-                                print(f"⚠️ Could not take final screenshot: {final_elements['error']}")
-                            
-                            break
-            
-            if "scroll" in ai_response.lower():
-                # Determine scroll direction
-                if "down" in ai_response.lower():
-                    print(f"\n📜 EXECUTING: Scrolling down")
-                    action_log.append(f"{len(action_log) + 1}. Scroll down the page")
-                    scroll_result = scroll_page(driver, "down", 500)
-                    tool_actions.append(f"📜 Scrolled down: {scroll_result.get('message', 'Success')}")
-                elif "up" in ai_response.lower():
-                    print(f"\n📜 EXECUTING: Scrolling up")
-                    action_log.append(f"{len(action_log) + 1}. Scroll up the page")
-                    scroll_result = scroll_page(driver, "up", 500)
-                    tool_actions.append(f"📜 Scrolled up: {scroll_result.get('message', 'Success')}")
-            
-            # Add tool actions to the response if any were executed
-            if tool_actions:
-                print(f"\n✅ ACTIONS COMPLETED:")
-                for action in tool_actions:
-                    print(f"   {action}")
-                ai_response += f"\n\n**Actions Taken:**\n" + "\n".join(tool_actions)
-            
-            # If page changed, take a new screenshot and discover new elements
-            if page_changed:
-                print(f"\n📸 Taking new screenshot after page change...")
-                # Discover new elements on the new page
-                elements = discover_page_elements(driver)
-                if "error" not in elements:
-                    # Create new annotated screenshot
-                    screenshot_path = take_annotated_screenshot(driver, elements)
-                    print(f"📸 New screenshot: {screenshot_path}")
+        # Execute based on mode
+        if mode == "test_cases":
+            # Test case mode - run agent multiple times, once per test case
+            # Convert TestCase objects to dictionaries for compatibility
+            test_cases_dict = []
+            for test_case in test_cases:
+                if hasattr(test_case, 'dict'):
+                    # Pydantic model
+                    test_cases_dict.append(test_case.dict())
+                elif hasattr(test_case, '__dict__'):
+                    # Regular object
+                    test_cases_dict.append(test_case.__dict__)
                 else:
-                    print(f"❌ Failed to discover elements on new page: {elements['error']}")
-                    break
-            
-            # Check if we should continue or if we've achieved the goal
-            if "login" in ai_response.lower() and ("found" in ai_response.lower() or "reached" in ai_response.lower()):
-                goal_achieved = True
-                print(f"\n🎯 GOAL ACHIEVED! LLM indicates login page found.")
-                break
-                
-            if current_iteration >= max_iterations:
-                print(f"\n⏰ MAX ITERATIONS REACHED. Stopping search.")
-                break
-        
-        # Final response
-        if goal_achieved:
-            ai_response += f"\n\n🎯 **MISSION ACCOMPLISHED**: Successfully found and navigated to the login page!"
+                    # Already a dict
+                    test_cases_dict.append(test_case)
+            return await execute_test_cases(test_cases_dict, browser_context, driver, elements, screenshot_path, context, response)
         else:
-            ai_response += f"\n\n❌ **SEARCH INCOMPLETE**: Could not find login page after {max_iterations} iterations."
-        
-        # Add action log for bug reproduction
-        ai_response += f"\n\n## 📋 **STEPS TO REPRODUCE**\n"
-        for step in action_log:
-            ai_response += f"{step}\n"
-        
-        # Format the response based on browser mode
-        browser_status = ""
-        if browser_context.get('keep_open', False):
-            browser_status = f"""
-🔍 **Browser Status**: Browser window is open and ready for manual inspection
-   - You can inspect the page, console, and network tabs
-   - Browser will stay open until you manually close it
-   - Use the browser developer tools to debug and inspect"""
-        else:
-            browser_status = f"""
-🔍 **Browser Status**: Browser will close automatically after response
-   - Set KEEP_BROWSER_OPEN=true environment variable to keep it open for inspection"""
-        
-        # Format the response
-        response_text = f"""{SUCCESS_MESSAGES['navigation_success']}
+            # Bug hunting mode - run agent with deterministic navigation count
+            return await execute_bug_hunting(browser_context, driver, elements, screenshot_path, context, response)
 
-🌐 **URL**: {browser_context['current_url']}
-📄 **Page Title**: {browser_context['page_title']}
-📊 **Page Size**: {browser_context['page_source_length']:,} characters
-
-{scroll_status}
-
-🎯 **Discovered Elements**:
-🔴 **Buttons**: {element_counts['buttons']} (button_1, button_2, etc.)
-🔵 **Inputs**: {element_counts['inputs']} (input_1, input_2, etc.)
-🟢 **Links**: {element_counts['links']} (link_1, link_2, etc.)
-🟠 **Selects**: {element_counts['selects']} (select_1, select_2, etc.)
-🟣 **Textareas**: {element_counts['textareas']} (textarea_1, textarea_2, etc.)
-
-📸 **Annotated Screenshot**: {screenshot_path}
-   - All interactive elements are highlighted with colored boxes and labels
-   - You can now reference elements by their labels (e.g., "click button_1")
-
-🤖 **AI Analysis**: {ai_response}
-
-{SUCCESS_MESSAGES['ready_for_interaction']}
-{browser_status}"""
-        
-        return response.text(response_text)
-        
     except Exception as e:
-        context.logger.error(f"Error running agent: {e}")
+        context.logger.error(f"Error in main agent function: {e}")
         import traceback
         context.logger.error(f"Full traceback: {traceback.format_exc()}")
-        
-        error_response = f"""{ERROR_MESSAGES['navigation_failed']}
-
-**Error**: {str(e)}
-
-**Troubleshooting**:
-- Verify the URL is accessible
-- Check your internet connection
-- Ensure the website is not blocking automated browsers
-- Try a different URL
-
-**Status**: Browser automation failed"""
-        
-        return response.text(error_response)
-        
+        return response.text(f"❌ Agent execution failed: {str(e)}")
     finally:
         # Handle browser cleanup based on environment setting
         if 'browser_context' in locals() and browser_context.get('driver'):
@@ -504,3 +310,170 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                     context.logger.info("Chrome driver closed successfully")
                 except Exception as e:
                     context.logger.error(f"Error closing driver: {e}")
+
+
+async def execute_test_cases(test_cases, browser_context, driver, elements, screenshot_path, context, response):
+    """Execute test cases by running the agent multiple times, once per test case."""
+    test_results = []
+    action_log = []
+    action_log.append(f"1. Navigate to: {browser_context['current_url']}")
+    action_log.append(f"2. Page loaded: '{browser_context['page_title']}'")
+    
+    for i, test_case in enumerate(test_cases, 1):
+        context.logger.info(f"Executing test case {i}/{len(test_cases)}: {test_case.get('what_to_test', 'N/A')}")
+        
+        # Create test case specific prompt
+        from agentuity_agents.my_agent.prompts.test_case_prompt import TEST_CASE_PROMPT
+        
+        test_prompt = f"""
+        {SYSTEM_PROMPT}
+        
+        {TEST_CASE_PROMPT}
+        
+        Browser Status: Successfully opened and navigated
+        Current Page: {browser_context['page_title']}
+        URL: {browser_context['current_url']}
+        Page Size: {browser_context['page_source_length']} characters
+        Tester User ID: {browser_context.get('tester_user_id', 'Not specified')}
+        
+        Current Test Case {i}/{len(test_cases)}:
+        What to test: {test_case.get('what_to_test', 'N/A')}
+        Expected output: {test_case.get('expected_output', 'No specific expectation provided')}
+        
+        Execute this test case and report the results.
+        """
+        
+        # Run the agent for this test case
+        result = await run_single_agent_iteration(test_prompt, driver, elements, screenshot_path, context)
+        
+        # Store test case result
+        test_results.append({
+            "test_case": i,
+            "what_to_test": test_case.get('what_to_test', 'N/A'),
+            "expected_output": test_case.get('expected_output', 'N/A'),
+            "result": result
+        })
+        
+        action_log.append(f"{len(action_log) + 1}. Test case {i} executed: {test_case.get('what_to_test', 'N/A')}")
+    
+    # Generate final response
+    final_response = f"🎯 **TEST EXECUTION COMPLETED**: All {len(test_cases)} test cases have been executed!\n\n"
+    final_response += "## 📊 **TEST RESULTS SUMMARY**\n"
+    
+    for result in test_results:
+        final_response += f"\n**Test Case {result['test_case']}:**\n"
+        final_response += f"- What to test: {result['what_to_test']}\n"
+        final_response += f"- Expected output: {result['expected_output']}\n"
+        final_response += f"- Result: {result['result']}\n"
+    
+    final_response += f"\n## 📋 **STEPS TO REPRODUCE**\n"
+    for step in action_log:
+        final_response += f"{step}\n"
+    
+    return response.text(final_response)
+
+
+async def execute_bug_hunting(browser_context, driver, elements, screenshot_path, context, response):
+    """Execute bug hunting - single agent run with automatic tool termination."""
+    from agentuity_agents.my_agent.prompts.bug_hunting_prompt import BUG_HUNTING_PROMPT
+    from agentuity_agents.my_agent.tools import reset_navigation_count, get_navigation_count
+    
+    # Reset navigation counter at start
+    reset_navigation_count()
+    
+    # Create bug hunting prompt
+    bug_prompt = f"""
+    {SYSTEM_PROMPT}
+    
+    {BUG_HUNTING_PROMPT}
+    
+    Browser Status: Successfully opened and navigated
+    Current Page: {browser_context['page_title']}
+    URL: {browser_context['current_url']}
+    Page Size: {browser_context['page_source_length']} characters
+    Tester User ID: {browser_context.get('tester_user_id', 'Not specified')}
+    
+    Explore the website to find potential bugs or issues.
+    Use available tools to navigate and test functionality.
+    The tools will automatically stop after 20 navigation actions.
+    """
+    
+    # Run the agent once - it will use multiple tool calls and terminate automatically
+    result = await run_single_agent_iteration(bug_prompt, driver, elements, screenshot_path, context)
+    
+    # Generate final response
+    final_nav_count = get_navigation_count()
+    if "bug" in result.lower() and ("found" in result.lower() or "discovered" in result.lower()):
+        final_response = f"🐛 **BUGS DISCOVERED**: Found potential issues during exploration!\n\n"
+        final_response += f"## 🐛 **BUG FINDINGS**\n{result}\n\n"
+    else:
+        final_response = f"✅ **NO BUGS FOUND**: Completed {final_nav_count} navigations without discovering any issues.\n\n"
+    
+    final_response += f"## 📋 **EXPLORATION SUMMARY**\n"
+    final_response += f"- Total navigations: {final_nav_count}\n"
+    final_response += f"- Final page: {browser_context['current_url']}\n"
+    final_response += f"- Agent response: {result}\n"
+    
+    return response.text(final_response)
+
+
+async def run_single_agent_iteration(prompt, driver, elements, screenshot_path, context):
+    """Run a single iteration of the agent with the given prompt."""
+    try:
+        # Generate AI response with screenshot
+        import base64
+        
+        # Read the screenshot file and encode it
+        screenshot_path_clean = screenshot_path.split(" (Size:")[0]  # Remove size info
+        try:
+            with open(screenshot_path_clean, "rb") as image_file:
+                image_data = base64.b64encode(image_file.read()).decode('utf-8')
+        except Exception as e:
+            context.logger.warning(f"Could not load screenshot: {e}")
+            image_data = None
+        
+        # Create the prompt with image only - no text fallback
+        if not image_data:
+            context.logger.error("Screenshot not available - cannot proceed without image")
+            return "Error: Screenshot not available. Cannot analyze page without visual context."
+        
+        contents = [
+            {
+                "parts": [
+                    {
+                        "text": prompt + f"\n\nLook at the annotated screenshot below. The colored boxes show all interactive elements with their labels. Analyze the page and provide your response based on what you see."
+                    },
+                    {
+                        "inline_data": {
+                            "mime_type": "image/png",
+                            "data": image_data
+                        }
+                    }
+                ]
+            }
+        ]
+        
+        # Generate AI response with tools for actual execution
+        result = client.models.generate_content(
+            model="gemini-2.5-pro",
+            contents=contents,
+        )
+
+        ai_response = result.text
+        
+        # Clean up the AI response formatting
+        print("\n" + "="*80)
+        print("🤖 LLM THINKING PROCESS")
+        print("="*80)
+        print(ai_response)
+        print("="*80)
+            
+        
+        
+        return result.text
+        
+    except Exception as e:
+        context.logger.error(f"Error in single agent iteration: {e}")
+        return f"Error during agent execution: {str(e)}"
+
+

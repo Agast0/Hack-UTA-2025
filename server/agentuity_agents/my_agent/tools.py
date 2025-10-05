@@ -6,8 +6,6 @@ import re
 from urllib.parse import urlparse
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -46,12 +44,7 @@ def validate_url(url: str) -> tuple[bool, str]:
 def setup_chrome_driver(keep_open: bool = False) -> webdriver.Chrome:
     """
     Setup and configure Chrome driver for browsing.
-    
-    Args:
-        keep_open (bool): Whether to keep browser open after script ends (dev mode)
-    
-    Returns:
-        webdriver.Chrome: Configured Chrome driver instance
+    This version relies on the integrated Selenium Manager.
     """
     chrome_options = Options()
     
@@ -70,9 +63,8 @@ def setup_chrome_driver(keep_open: bool = False) -> webdriver.Chrome:
     if keep_open:
         chrome_options.add_experimental_option("detach", True)
     
-    # Use webdriver-manager to automatically handle Chrome driver
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    # Use Selenium Manager to automatically handle Chrome driver
+    driver = webdriver.Chrome(options=chrome_options)
     driver.set_page_load_timeout(30)
     
     return driver
