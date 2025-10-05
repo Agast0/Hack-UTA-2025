@@ -337,14 +337,14 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
         # --- ROBUST INPUT PARSING LOGIC ---
         input_url = None
         test_cases = None
-        tester_user_id = None
+        team_id = None
 
         # Pattern 1: Data is a pre-parsed object with attributes (most likely case based on logs)
         if hasattr(request.data, 'url'):
             input_url = request.data.url
             # Use getattr for safety; it returns None if the attribute doesn't exist
             test_cases = getattr(request.data, 'test_cases', None)
-            tester_user_id = getattr(request.data, 'tester_user_id', None)
+            team_id = getattr(request.data, 'team_id', None)
         
         # Pattern 2: Fallback for raw text/JSON payload
         elif hasattr(request.data, 'text'):
@@ -354,7 +354,7 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                     data_obj = json.loads(data_text)
                     input_url = data_obj.get('url')
                     test_cases = data_obj.get('test_cases')
-                    tester_user_id = data_obj.get('tester_user_id')
+                    team_id = data_obj.get('team_id')
                 else:
                     input_url = data_text
             except json.JSONDecodeError:
@@ -369,7 +369,7 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
 
         # --- END OF PARSING ---
 
-        print(f"Tester user ID: {tester_user_id}")
+        print(f"Tester user ID: {team_id}")
 
 
         success, message, browser_context = deterministic_browser_setup(input_url, context)
@@ -394,7 +394,7 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                 initial_screenshot_path=initial_screenshot_path,
                 context=context,
                 response=response,
-                tester_user_id=tester_user_id
+                team_id=team_id
             )
         # Otherwise, default to bug hunting mode.
         else:
@@ -406,7 +406,7 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                 initial_screenshot_path=initial_screenshot_path,
                 context=context,
                 response=response,
-                tester_user_id=tester_user_id
+                team_id=team_id
             )
 
     except Exception as e:
@@ -421,14 +421,14 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
             except Exception as e:
                 context.logger.error(f"Error closing driver: {e}")
 
-async def execute_bug_hunting(browser_context, driver, initial_elements, initial_screenshot_path, context, response, tester_user_id=None):
+async def execute_bug_hunting(browser_context, driver, initial_elements, initial_screenshot_path, context, response, team_id=None):
     final_text_result, action_log = await run_agent_loop(
         task_prompt=BUG_HUNTING_PROMPT,
         driver=driver,
         initial_elements=initial_elements,
         initial_screenshot_path=initial_screenshot_path,
         context=context,
-        tester_user_id=tester_user_id
+        team_id=team_id
     )
     
     # Try to parse the response as JSON bug reports
@@ -440,8 +440,11 @@ async def execute_bug_hunting(browser_context, driver, initial_elements, initial
             import json
             bug_reports = json.loads(json_match.group())
             
-            # Convert screenshot paths to base64
+            # Convert screenshot paths to base64 and add team_id
             for report in bug_reports:
+                # Add team_id to each bug report
+                report['team_id'] = team_id or 'automation_agent'
+                
                 for step in report.get('reproduction_steps', []):
                     if 'image_url' in step and step['image_url'].endswith('.png'):
                         try:
@@ -465,7 +468,7 @@ async def execute_bug_hunting(browser_context, driver, initial_elements, initial
         # Fallback to text response
         return response.text(f"Error parsing bug reports: {str(e)}\n\nRaw response: {final_text_result}")
 
-async def execute_test_cases(test_cases, browser_context, driver, initial_elements, initial_screenshot_path, context, response, tester_user_id=None):
+async def execute_test_cases(test_cases, browser_context, driver, initial_elements, initial_screenshot_path, context, response, team_id=None):
     all_results = []
     overall_action_log = []
 
@@ -536,7 +539,7 @@ async def execute_test_cases(test_cases, browser_context, driver, initial_elemen
             initial_elements=fresh_initial_elements,
             initial_screenshot_path=fresh_initial_screenshot_path,
             context=context,
-            tester_user_id=tester_user_id
+            team_id=team_id
         )
         
         all_results.append({
@@ -568,6 +571,8 @@ async def execute_test_cases(test_cases, browser_context, driver, initial_elemen
                 if isinstance(bug_report, dict) and bug_report.get('title'):
                     # Convert screenshot paths to base64
                     bug_report = convert_screenshots_to_base64(bug_report)
+                    # Add team_id to the bug report
+                    bug_report['team_id'] = team_id or 'automation_agent'
                     all_bug_reports.append(bug_report)
             else:
                 # No JSON found - no bugs reported
@@ -586,7 +591,7 @@ async def execute_test_cases(test_cases, browser_context, driver, initial_elemen
         # No bugs found - return empty array
         return response.json([])
 
-async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_screenshot_path: str, context: AgentContext, tester_user_id=None):
+async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_screenshot_path: str, context: AgentContext, team_id=None):
     # (This function is correct and remains unchanged)
     context.logger.info("🚀 Starting STATELESS agent loop...")
     
@@ -631,8 +636,6 @@ async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_scr
         Current bug number: {bug_number}
         Current step number: {step_number}
         Use image_url format: "bug_{bug_number}_step_{{step_number}}_screenshot"
-        --- USER INFORMATION ---
-        Reporter User ID: {tester_user_id or 'automation_agent'}
         --- YOUR INSTRUCTION ---
         Given the task, previous actions, and the current page state in the screenshot, decide the single next action to take using a tool. If the task is done, provide a final text answer.
         """

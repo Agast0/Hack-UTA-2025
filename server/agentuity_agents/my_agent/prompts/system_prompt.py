@@ -51,12 +51,10 @@ When you have completed your testing, you MUST return your final result as JSON 
       "text": "string",
       "image_url": "string"
     }
-  ],
-  "reporter_user_id": "string"
+  ]
 }
 ```
 
-**IMPORTANT**: Use the "Reporter User ID" provided in the USER INFORMATION section for the `reporter_user_id` field.
 
 ## CRITICAL WORKFLOW:
 1. **Use tools** to perform the test actions (click, fill, etc.)
