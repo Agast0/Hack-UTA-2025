@@ -28,5 +28,5 @@ echo "🐍 Activating virtual environment..."
 source .venv/bin/activate
 
 # Start Agentuity dev mode
-echo "🎯 Starting Agentuity dev mode on port 8001..."
+echo "🎯 Starting Agentuity dev mode on port 3005..."
 agentuity dev
