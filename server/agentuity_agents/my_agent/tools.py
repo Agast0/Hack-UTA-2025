@@ -34,9 +34,8 @@ def validate_url(url: str) -> tuple[bool, str]:
         if not all([result.scheme, result.netloc]):
             return False, "Invalid URL format - missing scheme or netloc"
         
-        # Basic domain validation
-        domain_pattern = r'^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$'
-        if not re.match(domain_pattern, result.netloc):
+        # Basic domain validation - very permissive
+        if not result.netloc or len(result.netloc) < 1:
             return False, "Invalid domain name format"
             
         return True, ""
