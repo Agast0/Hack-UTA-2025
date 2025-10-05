@@ -50,3 +50,5 @@ secrets/
 # Agentuity specific
 .agentuity/
 agentuity-crash-*.json
+
+main.cpython-*
