@@ -14,7 +14,8 @@ from agentuity_agents.my_agent.prompts.test_case_prompt import TEST_CASE_PROMPT
 from agentuity_agents.my_agent.tools import (
     validate_url, setup_chrome_driver, navigate_to_url, discover_page_elements, 
     take_annotated_screenshot, remove_annotations, click_element, scroll_page, 
-    extract_element_info, BROWSER_TOOLS
+    extract_element_info, fill_input_field, select_dropdown_option, check_checkbox,
+    hover_element, press_key, BROWSER_TOOLS
 )
 
 # --- API and Client Initialization ---
@@ -27,8 +28,8 @@ client = genai.Client(api_key=api_key)
 # --- Tool Dispatcher ---
 AVAILABLE_TOOLS = {
     "click_element": click_element,
+    "fill_input_field": fill_input_field,
     "scroll_page": scroll_page,
-    "extract_element_info": extract_element_info,
 }
 
 # Define tool declarations for Gemini API
@@ -81,11 +82,95 @@ extract_element_info_function = {
     }
 }
 
-# Configure tools for Gemini API
+fill_input_field_function = {
+    "name": "fill_input_field",
+    "description": "Fill an input field with text",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "element_label": {
+                "type": "string",
+                "description": "The label of the input element"
+            },
+            "text": {
+                "type": "string",
+                "description": "Text to fill in the input field"
+            }
+        },
+        "required": ["element_label", "text"]
+    }
+}
+
+select_dropdown_option_function = {
+    "name": "select_dropdown_option",
+    "description": "Select an option from a dropdown/select element",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "element_label": {
+                "type": "string",
+                "description": "The label of the select element"
+            },
+            "option_text": {
+                "type": "string",
+                "description": "Text of the option to select"
+            }
+        },
+        "required": ["element_label", "option_text"]
+    }
+}
+
+check_checkbox_function = {
+    "name": "check_checkbox",
+    "description": "Check or uncheck a checkbox",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "element_label": {
+                "type": "string",
+                "description": "The label of the checkbox element"
+            }
+        },
+        "required": ["element_label"]
+    }
+}
+
+hover_element_function = {
+    "name": "hover_element",
+    "description": "Hover over an element to trigger hover effects",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "element_label": {
+                "type": "string",
+                "description": "The label of the element to hover"
+            }
+        },
+        "required": ["element_label"]
+    }
+}
+
+press_key_function = {
+    "name": "press_key",
+    "description": "Press a key on the keyboard",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "key": {
+                "type": "string",
+                "description": "Key to press (e.g., 'Enter', 'Tab', 'Escape', 'ArrowDown', etc.)"
+            }
+        },
+        "required": ["key"]
+    }
+}
+
+
+# Configure tools for Gemini API - Essential tools only
 tools = types.Tool(function_declarations=[
     click_element_function,
-    scroll_page_function,
-    extract_element_info_function
+    fill_input_field_function,
+    scroll_page_function
 ])
 config = types.GenerateContentConfig(tools=[tools])
 
@@ -322,13 +407,44 @@ async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_scr
 
         contents = [{"parts": [{"text": turn_prompt}, {"inline_data": {"mime_type": "image/png", "data": image_data}}]}]
 
-        response = client.models.generate_content(
-            model="gemini-flash-latest",
-            contents=contents,
-            config=config
-        )
-        
-        part = response.candidates[0].content.parts[0]
+        try:
+            response = client.models.generate_content(
+                model="gemini-flash-latest",
+                contents=contents,
+                config=config
+            )
+            
+            # Debug logging for response structure
+            context.logger.info(f"Response type: {type(response)}")
+            context.logger.info(f"Response candidates: {response.candidates if hasattr(response, 'candidates') else 'No candidates'}")
+            
+            if not response.candidates:
+                context.logger.error("No candidates in response")
+                return "Agent received empty response from model", action_log
+            
+            if not response.candidates[0]:
+                context.logger.error("First candidate is None")
+                return "Agent received invalid response from model", action_log
+                
+            if not response.candidates[0].content:
+                context.logger.error("Content is None")
+                return "Agent received response with no content", action_log
+                
+            if not response.candidates[0].content.parts:
+                context.logger.error("Parts is None")
+                # Check if this is a malformed function call error
+                if response.candidates[0].finish_reason and "MALFORMED_FUNCTION_CALL" in str(response.candidates[0].finish_reason):
+                    context.logger.error("Model made a malformed function call - continuing with next turn")
+                    action_log.append("Model made a malformed function call - continuing with next turn")
+                    continue  # Skip this turn and continue with the next one
+                return "Agent received response with no parts", action_log
+            
+            part = response.candidates[0].content.parts[0]
+            
+        except Exception as e:
+            context.logger.error(f"Error processing Gemini response: {e}")
+            context.logger.error(f"Response object: {response if 'response' in locals() else 'No response'}")
+            return f"Agent encountered error processing model response: {str(e)}", action_log
 
         if hasattr(part, 'function_call') and part.function_call:
             function_call = part.function_call
