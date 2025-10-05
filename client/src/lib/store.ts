@@ -19,6 +19,7 @@ interface TeamState {
   addUserToTeam: (teamId: string, user: User) => void;
   removeUserFromTeam: (teamId: string, userId: string) => void;
   getAvailableUsers: (teamId: string) => User[];
+  renameTeam: (teamId: string, name: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -125,6 +126,13 @@ export const useTeamStore = create<TeamState>()(
         
         const teamMemberIds = (team.members || []).map(member => member.id);
         return mockUsers.filter(user => !teamMemberIds.includes(user.id));
+      },
+      renameTeam: (teamId: string, name: string) => {
+        set((state) => ({
+          teams: state.teams.map(team =>
+            team.id === teamId ? { ...team, name } : team
+          ),
+        }));
       },
     }),
     {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Users, Shield, MoreHorizontal, Trash2, UserPlus, X } from 'lucide-react';
+import { Plus, Users, Shield, MoreHorizontal, Trash2, UserPlus, X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,14 +29,16 @@ import { useTeamStore } from '@/lib/store';
 import { Team } from '@/types/bug';
 
 export function Sidebar() {
-  const { teams, selectedTeamId, setSelectedTeam, addTeam, deleteTeam, addUserToTeam, removeUserFromTeam, getAvailableUsers } = useTeamStore();
+  const { teams, selectedTeamId, setSelectedTeam, addTeam, deleteTeam, addUserToTeam, removeUserFromTeam, getAvailableUsers, renameTeam } = useTeamStore();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const [teamToAddUser, setTeamToAddUser] = useState<Team | null>(null);
+  const [teamToRename, setTeamToRename] = useState<Team | null>(null);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamDescription, setNewTeamDescription] = useState('');
+  const [renameValue, setRenameValue] = useState('');
 
   const handleCreateTeam = () => {
     if (newTeamName.trim()) {
@@ -80,6 +82,14 @@ export function Sidebar() {
 
   const handleRemoveUser = (teamId: string, userId: string) => {
     removeUserFromTeam(teamId, userId);
+  };
+
+  const confirmRenameTeam = () => {
+    if (teamToRename && renameValue.trim()) {
+      renameTeam(teamToRename.id, renameValue.trim());
+      setTeamToRename(null);
+      setRenameValue('');
+    }
   };
 
   return (
@@ -172,10 +182,20 @@ export function Sidebar() {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTeamToRename(team);
+                          setRenameValue(team.name);
+                        }}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        <span>Rename Team</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
                             handleDeleteTeam(team);
                           }}
                           className="text-destructive focus:text-destructive"
@@ -329,6 +349,49 @@ export function Sidebar() {
               onClick={() => setIsAddUserDialogOpen(false)}
             >
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Team Dialog */}
+      <Dialog open={!!teamToRename} onOpenChange={(open) => {
+        if (!open) {
+          setTeamToRename(null);
+          setRenameValue('');
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Rename Team</DialogTitle>
+            <DialogDescription>
+              Update the name for "{teamToRename?.name || ''}".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="rename-team">New Team Name</Label>
+            <Input
+              id="rename-team"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              placeholder="Enter new team name"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTeamToRename(null);
+                setRenameValue('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRenameTeam}
+              disabled={!renameValue.trim()}
+            >
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
