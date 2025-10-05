@@ -8,27 +8,69 @@ export const mockUser: User = {
   avatar: 'https://github.com/shadcn.png',
 };
 
+export const mockUsers: User[] = [
+  {
+    id: 'user-1',
+    email: 'john.doe@bugzooka.com',
+    name: 'John Doe',
+    avatar: 'https://github.com/shadcn.png',
+  },
+  {
+    id: 'user-2',
+    email: 'jane.smith@bugzooka.com',
+    name: 'Jane Smith',
+    avatar: 'https://github.com/jane.png',
+  },
+  {
+    id: 'user-3',
+    email: 'mike.wilson@bugzooka.com',
+    name: 'Mike Wilson',
+    avatar: 'https://github.com/mike.png',
+  },
+  {
+    id: 'user-4',
+    email: 'sarah.jones@bugzooka.com',
+    name: 'Sarah Jones',
+    avatar: 'https://github.com/sarah.png',
+  },
+  {
+    id: 'user-5',
+    email: 'alex.brown@bugzooka.com',
+    name: 'Alex Brown',
+    avatar: 'https://github.com/alex.png',
+  },
+  {
+    id: 'user-6',
+    email: 'emma.davis@bugzooka.com',
+    name: 'Emma Davis',
+    avatar: 'https://github.com/emma.png',
+  },
+];
+
 export const mockTeams: Team[] = [
   {
     id: 'team-1',
     name: 'Security Squad',
     description: 'Our elite security testing team',
     createdAt: new Date('2024-01-15'),
-    memberCount: 5,
+    memberCount: 3,
+    members: [mockUsers[0], mockUsers[1], mockUsers[2]],
   },
   {
     id: 'team-2',
     name: 'Bug Hunters',
     description: 'Specialized in web application testing',
     createdAt: new Date('2024-02-01'),
-    memberCount: 3,
+    memberCount: 2,
+    members: [mockUsers[3], mockUsers[4]],
   },
   {
     id: 'team-3',
     name: 'QA Masters',
     description: 'Comprehensive quality assurance',
     createdAt: new Date('2024-02-15'),
-    memberCount: 7,
+    memberCount: 1,
+    members: [mockUsers[5]],
   },
 ];
 

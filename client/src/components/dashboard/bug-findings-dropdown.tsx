@@ -18,9 +18,15 @@ interface BugFindingsDropdownProps {
   run: AgentRun;
   trigger?: React.ReactNode;
   className?: string;
+  align?: 'start' | 'center' | 'end';
 }
 
-export function BugFindingsModal({ run, trigger, className }: BugFindingsDropdownProps) {
+export function BugFindingsDropdown({ 
+  run, 
+  trigger, 
+  className = '', 
+  align = 'start' 
+}: BugFindingsDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const getSeverityColor = (severity: BugFinding['severity']) => {
@@ -53,12 +59,15 @@ export function BugFindingsModal({ run, trigger, className }: BugFindingsDropdow
       <DropdownMenuTrigger asChild>
         {trigger || (
           <Button variant="outline" size="sm" className="flex items-center space-x-1">
-            <span>View Details</span>
+            <span>View Bug Findings</span>
             <ChevronDown className="h-3 w-3" />
           </Button>
         )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent className={`w-[95vw] sm:w-[90vw] lg:w-[1200px] 2xl:w-[1400px] max-h-[80vh] overflow-y-auto p-0 ${className || ''}`}>
+      <DropdownMenuContent 
+        align={align}
+        className={`w-[95vw] sm:w-[90vw] lg:w-[1200px] 2xl:w-[1400px] max-h-[80vh] overflow-y-auto p-0 ${className}`}
+      >
         <div className="p-6">
           <div className="flex items-center space-x-2 mb-4">
             <Bug className="h-5 w-5" />

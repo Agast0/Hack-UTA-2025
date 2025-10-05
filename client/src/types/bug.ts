@@ -23,7 +23,7 @@ export const AgentRunSchema = z.object({
   settings: z.object({
     maxDepth: z.number().default(3),
     includeSubdomains: z.boolean().default(false),
-    customHeaders: z.record(z.string()).optional(),
+    customHeaders: z.record(z.string(), z.string()).optional(),
   }),
   status: z.enum(['pending', 'running', 'completed', 'failed']),
   bugFindings: z.array(BugFindingSchema),
@@ -33,16 +33,6 @@ export const AgentRunSchema = z.object({
 
 export type AgentRun = z.infer<typeof AgentRunSchema>;
 
-export const TeamSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-  createdAt: z.date(),
-  memberCount: z.number().default(1),
-});
-
-export type Team = z.infer<typeof TeamSchema>;
-
 export const UserSchema = z.object({
   id: z.string(),
   email: z.string().email(),
@@ -51,3 +41,14 @@ export const UserSchema = z.object({
 });
 
 export type User = z.infer<typeof UserSchema>;
+
+export const TeamSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  createdAt: z.date(),
+  memberCount: z.number().default(1),
+  members: z.array(UserSchema).default([]),
+});
+
+export type Team = z.infer<typeof TeamSchema>;

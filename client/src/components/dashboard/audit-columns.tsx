@@ -2,7 +2,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AgentRun } from '@/types/bug';
-import { BugFindingsModal } from './bug-findings-modal';
+import { BugFindingsDropdown } from './bug-findings-dropdown';
 
 export const columns: ColumnDef<AgentRun>[] = [
   {
@@ -37,7 +37,7 @@ export const columns: ColumnDef<AgentRun>[] = [
     header: 'Actions',
     cell: ({ row }) => {
       const run = row.original;
-      return <BugFindingsModal run={run} />;
+      return <BugFindingsDropdown run={run} />;
     },
   },
 ];

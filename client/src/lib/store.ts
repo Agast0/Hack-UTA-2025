@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User, Team } from '@/types/bug';
-import { mockUser, mockTeams } from './mock-data';
+import { mockUser, mockTeams, mockUsers } from './mock-data';
 
 interface AuthState {
   user: User | null;
@@ -15,6 +15,10 @@ interface TeamState {
   selectedTeamId: string | null;
   setSelectedTeam: (teamId: string | null) => void;
   addTeam: (team: Omit<Team, 'id' | 'createdAt'>) => void;
+  deleteTeam: (teamId: string) => void;
+  addUserToTeam: (teamId: string, user: User) => void;
+  removeUserFromTeam: (teamId: string, userId: string) => void;
+  getAvailableUsers: (teamId: string) => User[];
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -53,10 +57,54 @@ export const useTeamStore = create<TeamState>()(
           ...teamData,
           id: `team-${Date.now()}`,
           createdAt: new Date(),
+          members: teamData.members || [],
         };
         set((state) => ({
           teams: [...state.teams, newTeam],
         }));
+      },
+      deleteTeam: (teamId: string) => {
+        set((state) => {
+          const newTeams = state.teams.filter(team => team.id !== teamId);
+          const newSelectedTeamId = state.selectedTeamId === teamId ? null : state.selectedTeamId;
+          return {
+            teams: newTeams,
+            selectedTeamId: newSelectedTeamId,
+          };
+        });
+      },
+      addUserToTeam: (teamId: string, user: User) => {
+        set((state) => ({
+          teams: state.teams.map(team => 
+            team.id === teamId 
+              ? {
+                  ...team,
+                  members: [...(team.members || []), user],
+                  memberCount: (team.members || []).length + 1,
+                }
+              : team
+          ),
+        }));
+      },
+      removeUserFromTeam: (teamId: string, userId: string) => {
+        set((state) => ({
+          teams: state.teams.map(team => 
+            team.id === teamId 
+              ? {
+                  ...team,
+                  members: (team.members || []).filter(member => member.id !== userId),
+                  memberCount: Math.max(0, (team.members || []).length - 1),
+                }
+              : team
+          ),
+        }));
+      },
+      getAvailableUsers: (teamId: string) => {
+        const team = get().teams.find(t => t.id === teamId);
+        if (!team) return [];
+        
+        const teamMemberIds = (team.members || []).map(member => member.id);
+        return mockUsers.filter(user => !teamMemberIds.includes(user.id));
       },
     }),
     {
