@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Bug, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Plus, Bug, Clock, CheckCircle, AlertCircle, X, Play, Pause, RotateCcw, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { DataTable } from '@/components/ui/data-table';
+import { AuditTable } from './audit-table';
+import { BugFindingsCollapsible } from './bug-findings-collapsible';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -18,31 +20,271 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
 import { useTeamStore } from '@/lib/store';
-import { mockAgentRuns } from '@/lib/mock-data';
+import { mockAgentRuns, mockUsers } from '@/lib/mock-data';
 import { AgentRun } from '@/types/bug';
-import { columns } from './audit-columns';
-import { BugFindingsDropdown } from './bug-findings-dropdown';
+
+    // Running Audit Card Component
+    function RunningAuditCard({ run, testCases }: { run: AgentRun; testCases?: Array<{ id: string; test: string; expectedOutput: string }> }) {
+      const [isExpanded, setIsExpanded] = useState(false);
+
+      const toggleExpanded = () => {
+        setIsExpanded(!isExpanded);
+      };
+
+      const getUserName = (userId: string) => {
+        const user = mockUsers.find(u => u.id === userId);
+        return user ? user.name : userId;
+      };
+
+  // Use provided test cases or generate default ones
+  const auditTestCases = testCases && testCases.length > 0 ? testCases.map((tc, index) => ({
+    id: tc.id,
+    name: tc.test || `Test Case ${index + 1}`,
+    expectedOutput: tc.expectedOutput || '',
+    status: index === 0 ? 'running' : 'queued',
+    progress: index === 0 ? 45 : 0,
+  })) : [
+    { id: 'test-1', name: 'SQL Injection Test', expectedOutput: 'Should detect SQL injection vulnerabilities', status: 'running', progress: 45 },
+    { id: 'test-2', name: 'XSS Vulnerability Scan', expectedOutput: 'Should identify XSS attack vectors', status: 'queued', progress: 0 },
+    { id: 'test-3', name: 'Authentication Bypass', expectedOutput: 'Should test authentication mechanisms', status: 'queued', progress: 0 },
+    { id: 'test-4', name: 'CSRF Protection Check', expectedOutput: 'Should verify CSRF protection', status: 'queued', progress: 0 },
+  ];
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'running':
+        return <Clock className="h-4 w-4 text-gray-500 animate-spin" />;
+      case 'queued':
+        return <Pause className="h-4 w-4 text-gray-400" />;
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-400" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300';
+      case 'running':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300';
+      case 'queued':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300';
+    }
+  };
+
+      return (
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="pb-2">
+            <div className="space-y-3">
+              {/* Large URL Display - Clickable to expand/collapse */}
+              <div 
+                className="flex items-center space-x-3 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
+                onClick={toggleExpanded}
+              >
+                <Clock className="h-6 w-6 text-blue-600 animate-spin" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-lg text-foreground">{run.targetUrl}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Started {new Date(run.createdAt).toLocaleString()}
+                  </p>
+                  {run.createdBy && (
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className="text-xs text-muted-foreground">Created by:</span>
+                      <Badge variant="outline" className="text-xs">
+                        {getUserName(run.createdBy)}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-sm px-3 py-1">
+                    Running
+                  </Badge>
+                  {isExpanded ? (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+
+          {/* Expandable Test Cases */}
+          {isExpanded && (
+            <CardContent className="pt-0">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-base">Test Cases Progress</h4>
+                  <Badge variant="outline" className="text-sm">
+                    {auditTestCases.filter(t => t.status === 'running').length} running, {auditTestCases.filter(t => t.status === 'queued').length} queued
+                  </Badge>
+                </div>
+                
+                <div className="space-y-3">
+                  {auditTestCases.map((testCase) => (
+                    <div key={testCase.id} className="flex items-start space-x-4 p-4 border rounded-lg bg-muted/30">
+                      <div className="flex-shrink-0 mt-1">
+                        {getStatusIcon(testCase.status)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-base font-medium text-foreground">{testCase.name}</p>
+                          <Badge 
+                            variant="outline" 
+                            className={`text-sm ${getStatusColor(testCase.status)}`}
+                          >
+                            {testCase.status === 'running' ? 'Currently Running' : 'Queued'}
+                          </Badge>
+                        </div>
+                        
+                        {testCase.expectedOutput && (
+                          <p className="text-sm text-muted-foreground mb-3">
+                            <strong>Expected:</strong> {testCase.expectedOutput}
+                          </p>
+                        )}
+                        
+                        {testCase.status === 'running' && (
+                          <div className="space-y-2">
+                            <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${testCase.progress}%` }}
+                              />
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {testCase.progress}% complete
+                            </p>
+                          </div>
+                        )}
+                        
+                        {testCase.status === 'queued' && (
+                          <p className="text-sm text-muted-foreground">
+                            Waiting to start...
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      );
+}
 
 export function MainContent() {
   const { selectedTeamId, teams } = useTeamStore();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [targetUrl, setTargetUrl] = useState('');
-  const [maxDepth, setMaxDepth] = useState(3);
-  const [includeSubdomains, setIncludeSubdomains] = useState(false);
+  const [isCreatingAudit, setIsCreatingAudit] = useState(false);
+  const [testCases, setTestCases] = useState<Array<{ id: string; test: string; expectedOutput: string }>>([]);
+  const [createdAudits, setCreatedAudits] = useState<AgentRun[]>([]);
 
   const selectedTeam = teams.find(team => team.id === selectedTeamId);
   const teamRuns = selectedTeamId
     ? mockAgentRuns.filter((run) => run.teamId === selectedTeamId)
     : [];
 
-  const handleCreateAudit = () => {
-    if (targetUrl.trim()) {
-      // In a real app, this would make an API call
+  // Combine mock data with created audits
+  const allAudits = [...teamRuns, ...createdAudits];
+  const runningAudits = allAudits.filter((run) => run.status === 'running');
+  const completedAudits = allAudits.filter((run) => run.status === 'completed' || run.status === 'failed');
+
+  const addTestCase = () => {
+    const newTestCase = {
+      id: `test-${Date.now()}`,
+      test: '',
+      expectedOutput: '',
+    };
+    setTestCases([...testCases, newTestCase]);
+  };
+
+  const removeTestCase = (id: string) => {
+    setTestCases(testCases.filter(testCase => testCase.id !== id));
+  };
+
+  const updateTestCase = (id: string, field: 'test' | 'expectedOutput', value: string) => {
+    setTestCases(testCases.map(testCase => 
+      testCase.id === id ? { ...testCase, [field]: value } : testCase
+    ));
+  };
+
+  const handleCreateAudit = async () => {
+    if (isCreatingAudit) return; // Prevent multiple submissions
+    
+    if (!targetUrl.trim()) {
+      toast.error('Please enter a target URL');
+      return;
+    }
+    
+    // Basic URL validation
+    try {
+      new URL(targetUrl.trim());
+    } catch {
+      toast.error('Please enter a valid URL (e.g., https://example.com)');
+      return;
+    }
+    
+    setIsCreatingAudit(true);
+    
+    try {
+      // Create a new audit run
+      const newRun: AgentRun = {
+        id: `run-${Date.now()}`,
+        teamId: selectedTeamId || '',
+        targetUrl: targetUrl.trim(),
+        createdBy: 'user-1', // In real app, this would be the current user ID
+        status: 'running',
+        createdAt: new Date(),
+        completedAt: undefined,
+        bugFindings: [],
+        settings: {
+          includeSubdomains: false,
+          customHeaders: {},
+        },
+      };
+
+      // Store test cases with the audit (we'll add this to the audit object)
+      const auditWithTestCases = {
+        ...newRun,
+        testCases: testCases.length > 0 ? testCases : []
+      };
+
+      // Add the new audit to the created audits state
+      setCreatedAudits(prev => [...prev, auditWithTestCases]);
+
+      // In a real app, this would make an API call to create the audit
       console.log('Creating audit for:', targetUrl);
+      console.log('Test cases:', testCases);
+      console.log('New run created:', newRun);
+      
+      // In a real app, this would start the actual audit process
+      console.log('Audit started for:', targetUrl);
+      console.log('Audit will continue running until manually stopped');
+    
+      // Reset form
       setTargetUrl('');
+      setTestCases([]);
       setIsCreateDialogOpen(false);
+      
+      // Show success message
+      const testCasesText = testCases.length > 0 ? ` with ${testCases.length} specific test case${testCases.length > 1 ? 's' : ''}` : '';
+      toast.success(`Audit started for ${targetUrl}!`, {
+        description: `Check the Past Audits section to see progress.${testCasesText}`,
+        duration: 4000,
+      });
+    } catch (error) {
+      toast.error('Failed to start audit. Please try again.');
+      console.error('Error creating audit:', error);
+    } finally {
+      setIsCreatingAudit(false);
     }
   };
 
@@ -74,19 +316,7 @@ export function MainContent() {
     );
   };
 
-  const auditColumns = [
-    ...columns,
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }: any) => (
-        <div className="flex items-center space-x-2">
-          {getStatusIcon(row.original.status)}
-          {getStatusBadge(row.original.status)}
-        </div>
-      ),
-    },
-  ];
+  // Removed auditColumns as we're now using AuditTable component
 
   if (!selectedTeamId) {
     return (
@@ -141,33 +371,88 @@ export function MainContent() {
                       onChange={(e) => setTargetUrl(e.target.value)}
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="depth">Max Depth</Label>
-                    <Input
-                      id="depth"
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={maxDepth}
-                      onChange={(e) => setMaxDepth(Number(e.target.value))}
-                    />
+                </div>
+
+                {/* Specific Test Cases Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Specific Test Cases</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addTestCase}
+                      className="flex items-center space-x-1"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add Test Case</span>
+                    </Button>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="subdomains"
-                      checked={includeSubdomains}
-                      onCheckedChange={setIncludeSubdomains}
-                    />
-                    <Label htmlFor="subdomains">Include Subdomains</Label>
+                  
+                  {testCases.length === 0 ? (
+                    <div className="text-center py-4 border-2 border-dashed border-muted-foreground/25 rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        No specific test cases added. Click "Add Test Case" to add custom tests.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {testCases.map((testCase, index) => (
+                        <div key={testCase.id} className="border rounded-lg p-3 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm font-medium">
+                              Specific Test {index + 1}
+                            </Label>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeTestCase(testCase.id)}
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div>
+                              <Label htmlFor={`test-${testCase.id}`} className="text-xs">
+                                Test Description
+                              </Label>
+                              <Input
+                                id={`test-${testCase.id}`}
+                                placeholder="e.g., Test SQL injection on login form"
+                                value={testCase.test}
+                                onChange={(e) => updateTestCase(testCase.id, 'test', e.target.value)}
+                                className="mt-1"
+                              />
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor={`expected-${testCase.id}`} className="text-xs">
+                                Expected Output
+                              </Label>
+                              <Input
+                                id={`expected-${testCase.id}`}
+                                placeholder="e.g., Should return error message, not execute query"
+                                value={testCase.expectedOutput}
+                                onChange={(e) => updateTestCase(testCase.id, 'expectedOutput', e.target.value)}
+                                className="mt-1"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                   </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button
                     type="submit"
                     onClick={handleCreateAudit}
-                    disabled={!targetUrl.trim()}
+                    disabled={!targetUrl.trim() || isCreatingAudit}
                   >
-                    Start Audit
+                    {isCreatingAudit ? 'Starting Audit...' : 'Start Audit'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -176,56 +461,60 @@ export function MainContent() {
         </div>
 
         <div className="space-y-6">
-          {/* Quick Bug Findings Access */}
-          {teamRuns.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Bug Findings Access</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {teamRuns.slice(0, 3).map((run) => (
-                    <div key={run.id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium text-sm truncate">{run.targetUrl}</h4>
-                        <Badge variant="secondary" className="text-xs">
-                          {run.bugFindings.length} bugs
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        {new Date(run.createdAt).toLocaleDateString()}
-                      </p>
-                      <BugFindingsDropdown 
-                        run={run}
-                        trigger={
-                          <Button variant="outline" size="sm" className="w-full">
-                            View Bug Findings
-                          </Button>
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
+          {/* Running Audits Section */}
           <Card>
             <CardHeader>
-              <CardTitle>Past Audits</CardTitle>
+              <CardTitle className="flex items-center space-x-2">
+                <Play className="h-5 w-5 text-blue-600" />
+                <span>Running Audits</span>
+                {runningAudits.length > 0 && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    {runningAudits.length}
+                  </Badge>
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {teamRuns.length > 0 ? (
-                <DataTable
-                  columns={auditColumns}
-                  data={teamRuns}
+              {runningAudits.length > 0 ? (
+                <div className="space-y-4">
+                  {runningAudits.map((run) => (
+                    <RunningAuditCard key={run.id} run={run} testCases={(run as any).testCases} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Play className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No running audits. Start a new audit to see it here!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Past Audits Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                <span>Past Audits</span>
+                {completedAudits.length > 0 && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    {completedAudits.length}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {completedAudits.length > 0 ? (
+                <AuditTable
+                  data={completedAudits}
                   filterColumnId="targetUrl"
                   filterPlaceholder="Filter URLs..."
                 />
               ) : (
                 <div className="text-center py-8">
                   <Bug className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">No audits yet. Create your first audit to get started!</p>
+                  <p className="text-muted-foreground">No completed audits yet. Create your first audit to get started!</p>
                 </div>
               )}
             </CardContent>

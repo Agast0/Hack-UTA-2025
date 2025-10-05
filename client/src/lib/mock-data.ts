@@ -92,6 +92,7 @@ export const mockBugFindings: BugFinding[] = [
       'https://via.placeholder.com/400x300/ff0000/ffffff?text=Database+Access',
     ],
     createdAt: new Date('2024-03-01T10:30:00Z'),
+    status: 'pending',
   },
   {
     id: 'bug-2',
@@ -109,6 +110,7 @@ export const mockBugFindings: BugFinding[] = [
       'https://via.placeholder.com/400x300/ff8800/ffffff?text=XSS+Alert',
     ],
     createdAt: new Date('2024-03-01T11:15:00Z'),
+    status: 'pending',
   },
   {
     id: 'bug-3',
@@ -126,6 +128,7 @@ export const mockBugFindings: BugFinding[] = [
       'https://via.placeholder.com/400x300/ffff00/000000?text=No+CSRF+Token',
     ],
     createdAt: new Date('2024-03-01T12:00:00Z'),
+    status: 'pending',
   },
   {
     id: 'bug-4',
@@ -143,6 +146,7 @@ export const mockBugFindings: BugFinding[] = [
       'https://via.placeholder.com/400x300/00ff00/000000?text=Weak+Password',
     ],
     createdAt: new Date('2024-03-01T12:30:00Z'),
+    status: 'pending',
   },
 ];
 
@@ -151,8 +155,8 @@ export const mockAgentRuns: AgentRun[] = [
     id: 'run-1',
     teamId: 'team-1',
     targetUrl: 'https://example.com',
+    createdBy: 'user-1',
     settings: {
-      maxDepth: 3,
       includeSubdomains: false,
       customHeaders: {
         'User-Agent': 'BugZooka/1.0',
@@ -167,8 +171,8 @@ export const mockAgentRuns: AgentRun[] = [
     id: 'run-2',
     teamId: 'team-1',
     targetUrl: 'https://demo.app.com',
+    createdBy: 'user-2',
     settings: {
-      maxDepth: 2,
       includeSubdomains: true,
     },
     status: 'completed',
@@ -180,8 +184,8 @@ export const mockAgentRuns: AgentRun[] = [
     id: 'run-3',
     teamId: 'team-2',
     targetUrl: 'https://test-site.org',
+    createdBy: 'user-3',
     settings: {
-      maxDepth: 1,
       includeSubdomains: false,
     },
     status: 'running',

@@ -12,6 +12,11 @@ export const BugFindingSchema = z.object({
   roastMessage: z.string(),
   screenshotUrls: z.array(z.string()),
   createdAt: z.date(),
+  status: z.enum(['pending', 'confirmed', 'rejected']).default('pending'),
+  confirmedBy: z.string().optional(),
+  rejectedBy: z.string().optional(),
+  confirmedAt: z.date().optional(),
+  rejectedAt: z.date().optional(),
 });
 
 export type BugFinding = z.infer<typeof BugFindingSchema>;
@@ -20,8 +25,8 @@ export const AgentRunSchema = z.object({
   id: z.string(),
   teamId: z.string(),
   targetUrl: z.string(),
+  createdBy: z.string(), // User ID who created/started the audit
   settings: z.object({
-    maxDepth: z.number().default(3),
     includeSubdomains: z.boolean().default(false),
     customHeaders: z.record(z.string(), z.string()).optional(),
   }),
