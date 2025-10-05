@@ -1,10 +1,8 @@
-# models.py
-from typing import Optional
-from beanie import Document
+from typing import Optional, List
+from beanie import Document, PydanticObjectId
 from pydantic import BaseModel, Field
 
-# This is your Beanie model, equivalent to a Mongoose Schema.
-# It represents the data structure in your MongoDB collection.
+# --- Existing User Models (Keep these) ---
 class User(Document):
     auth0Id: str = Field(..., unique=True)
     email: str
@@ -12,11 +10,9 @@ class User(Document):
     picture: Optional[str] = None
 
     class Settings:
-        name = 'users'   # The name of the MongoDB collection
+        name = 'users'
 
 
-# This is a Pydantic model for validating the incoming request body
-# for the /api/create endpoint.
 class UserCreate(BaseModel):
     sub: str
     email: str
@@ -24,7 +20,33 @@ class UserCreate(BaseModel):
     picture: Optional[str] = None
 
 
-# This is a Pydantic model for the response from /api/create
 class SyncResponse(BaseModel):
     message: str
     user: User
+
+
+# --- Bug Report Models ---
+class BugReport(Document):
+    title: str
+    description: str
+    is_approved: bool = False
+
+    class Settings:
+        name = 'bug_reports'
+
+
+class BugReportCreate(BaseModel):
+    title: str
+    description: str
+
+
+# NEW: Pydantic model for validating the incoming request body for updates.
+class BugReportUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    is_approved: Optional[bool] = None
+
+
+# NEW: Pydantic model for the delete response message.
+class DeleteResponse(BaseModel):
+    message: str
