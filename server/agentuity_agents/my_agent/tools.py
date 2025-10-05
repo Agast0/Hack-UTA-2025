@@ -6,10 +6,9 @@ import re
 from urllib.parse import urlparse
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 
 def validate_url(url: str) -> tuple[bool, str]:
@@ -46,12 +45,7 @@ def validate_url(url: str) -> tuple[bool, str]:
 def setup_chrome_driver(keep_open: bool = False) -> webdriver.Chrome:
     """
     Setup and configure Chrome driver for browsing.
-    
-    Args:
-        keep_open (bool): Whether to keep browser open after script ends (dev mode)
-    
-    Returns:
-        webdriver.Chrome: Configured Chrome driver instance
+    This version relies on the integrated Selenium Manager.
     """
     chrome_options = Options()
     
@@ -70,9 +64,8 @@ def setup_chrome_driver(keep_open: bool = False) -> webdriver.Chrome:
     if keep_open:
         chrome_options.add_experimental_option("detach", True)
     
-    # Use webdriver-manager to automatically handle Chrome driver
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    # Use Selenium Manager to automatically handle Chrome driver
+    driver = webdriver.Chrome(options=chrome_options)
     driver.set_page_load_timeout(30)
     
     return driver
@@ -371,7 +364,7 @@ def get_color_for_type(element_type: str) -> str:
     return colors.get(element_type, "gray")
 
 
-def take_annotated_screenshot(driver: webdriver.Chrome, elements: dict, filename: str = None) -> str:
+def take_annotated_screenshot(driver: webdriver.Chrome, elements: dict, filename: str = None, bug_number: int = None, step_number: int = None) -> str:
     """
     Take a screenshot with visual element annotations.
     
@@ -379,6 +372,8 @@ def take_annotated_screenshot(driver: webdriver.Chrome, elements: dict, filename
         driver (webdriver.Chrome): The Chrome driver instance
         elements (dict): Dictionary of discovered elements
         filename (str, optional): Custom filename for the screenshot
+        bug_number (int, optional): Bug number for deterministic naming
+        step_number (int, optional): Step number for deterministic naming
         
     Returns:
         str: Path to the saved screenshot
@@ -393,14 +388,25 @@ def take_annotated_screenshot(driver: webdriver.Chrome, elements: dict, filename
         
         # Generate filename if not provided
         if not filename:
-            import time
-            timestamp = int(time.time())
-            filename = f"annotated_page_{timestamp}.png"
+            if bug_number is not None and step_number is not None:
+                # Use deterministic naming for bug screenshots
+                filename = f"bug_{bug_number}_step_{step_number}_screenshot.png"
+            else:
+                # Fallback to timestamp for non-bug screenshots
+                timestamp = int(time.time())
+                filename = f"annotated_page_{timestamp}.png"
         
-        # Save to current directory instead of /tmp for easier access
+        # Create bug screenshots directory if using deterministic naming
         import os
-        current_dir = os.getcwd()
-        screenshot_path = os.path.join(current_dir, filename)
+        if bug_number is not None and step_number is not None:
+            current_dir = os.getcwd()
+            bug_screenshots_dir = os.path.join(current_dir, "bug_screenshots")
+            os.makedirs(bug_screenshots_dir, exist_ok=True)
+            screenshot_path = os.path.join(bug_screenshots_dir, filename)
+        else:
+            # Save to current directory for non-bug screenshots
+            current_dir = os.getcwd()
+            screenshot_path = os.path.join(current_dir, filename)
         
         # Take screenshot
         driver.save_screenshot(screenshot_path)
@@ -616,6 +622,363 @@ def extract_element_info(driver: webdriver.Chrome, element_label: str, elements:
         }
 
 
+def fill_input_field(driver: webdriver.Chrome, element_label: str, text: str, elements: dict) -> dict:
+    """
+    Fill an input field with text.
+    
+    Args:
+        driver: Chrome WebDriver instance
+        element_label: Label of the input element
+        text: Text to fill in the input
+        elements: Dictionary of discovered elements
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        # Find the element by label
+        target_element = None
+        element_type = None
+        
+        for elem_type, elem_list in elements.items():
+            if elem_type == "error":
+                continue
+            for elem_data in elem_list:
+                if elem_data["label"] == element_label:
+                    target_element = elem_data["element"]
+                    element_type = elem_type
+                    break
+            if target_element:
+                break
+        
+        if not target_element:
+            return {
+                "success": False,
+                "error": f"Element '{element_label}' not found in discovered elements"
+            }
+        
+        print(f"DEBUG: Found element '{element_label}' of type '{element_type}'")
+        print(f"DEBUG: Element is_displayed: {target_element.is_displayed()}")
+        print(f"DEBUG: Element is_enabled: {target_element.is_enabled()}")
+        
+        if element_type not in ["inputs", "textareas"]:
+            return {
+                "success": False,
+                "error": f"Element '{element_label}' is not an input field (type: {element_type})"
+            }
+        
+        # Clear existing text and fill new text
+        target_element.clear()
+        target_element.send_keys(text)
+        print(f"DEBUG: Successfully sent keys '{text}' to element '{element_label}'")
+        
+        return {
+            "success": True,
+            "message": f"Successfully filled '{element_label}' with text: '{text}'",
+            "element_label": element_label,
+            "text_entered": text
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to fill input field: {str(e)}"
+        }
+
+def select_dropdown_option(driver: webdriver.Chrome, element_label: str, option_text: str, elements: dict) -> dict:
+    """
+    Select an option from a dropdown/select element.
+    
+    Args:
+        driver: Chrome WebDriver instance
+        element_label: Label of the select element
+        option_text: Text of the option to select
+        elements: Dictionary of discovered elements
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        from selenium.webdriver.support.ui import Select
+        
+        # Find the element by label
+        target_element = None
+        element_type = None
+        
+        for elem_type, elem_list in elements.items():
+            if elem_type == "error":
+                continue
+            for elem_data in elem_list:
+                if elem_data["label"] == element_label:
+                    target_element = elem_data["element"]
+                    element_type = elem_type
+                    break
+            if target_element:
+                break
+        
+        if not target_element:
+            return {
+                "success": False,
+                "error": f"Element '{element_label}' not found in discovered elements"
+            }
+        
+        if element_type != "select":
+            return {
+                "success": False,
+                "error": f"Element '{element_label}' is not a select element (type: {element_type})"
+            }
+        
+        # Create Select object and select by visible text
+        select_obj = Select(target_element)
+        select_obj.select_by_visible_text(option_text)
+        
+        return {
+            "success": True,
+            "message": f"Successfully selected '{option_text}' from '{element_label}'",
+            "element_label": element_label,
+            "selected_option": option_text
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to select dropdown option: {str(e)}"
+        }
+
+def check_checkbox(driver: webdriver.Chrome, element_label: str, elements: dict) -> dict:
+    """
+    Check or uncheck a checkbox.
+    
+    Args:
+        driver: Chrome WebDriver instance
+        element_label: Label of the checkbox element
+        elements: Dictionary of discovered elements
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        # Find the element by label
+        target_element = None
+        element_type = None
+        
+        for elem_type, elem_list in elements.items():
+            if elem_type == "error":
+                continue
+            for elem_data in elem_list:
+                if elem_data["label"] == element_label:
+                    target_element = elem_data["element"]
+                    element_type = elem_type
+                    break
+            if target_element:
+                break
+        
+        if not target_element:
+            return {
+                "success": False,
+                "error": f"Element '{element_label}' not found in discovered elements"
+            }
+        
+        if element_type != "checkbox":
+            return {
+                "success": False,
+                "error": f"Element '{element_label}' is not a checkbox (type: {element_type})"
+            }
+        
+        # Toggle the checkbox
+        target_element.click()
+        is_checked = target_element.is_selected()
+        
+        return {
+            "success": True,
+            "message": f"Successfully toggled checkbox '{element_label}' - now {'checked' if is_checked else 'unchecked'}",
+            "element_label": element_label,
+            "is_checked": is_checked
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to toggle checkbox: {str(e)}"
+        }
+
+def hover_element(driver: webdriver.Chrome, element_label: str, elements: dict) -> dict:
+    """
+    Hover over an element to trigger hover effects.
+    
+    Args:
+        driver: Chrome WebDriver instance
+        element_label: Label of the element to hover
+        elements: Dictionary of discovered elements
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        from selenium.webdriver.common.action_chains import ActionChains
+        
+        # Find the element by label
+        target_element = None
+        
+        for elem_type, elem_list in elements.items():
+            if elem_type == "error":
+                continue
+            for elem_data in elem_list:
+                if elem_data["label"] == element_label:
+                    target_element = elem_data["element"]
+                    break
+            if target_element:
+                break
+        
+        if not target_element:
+            return {
+                "success": False,
+                "error": f"Element '{element_label}' not found in discovered elements"
+            }
+        
+        # Use ActionChains to hover
+        actions = ActionChains(driver)
+        actions.move_to_element(target_element).perform()
+        
+        return {
+            "success": True,
+            "message": f"Successfully hovered over '{element_label}'",
+            "element_label": element_label
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to hover over element: {str(e)}"
+        }
+
+def press_key(driver: webdriver.Chrome, key: str) -> dict:
+    """
+    Press a key on the keyboard.
+    
+    Args:
+        driver: Chrome WebDriver instance
+        key: Key to press (e.g., 'Enter', 'Tab', 'Escape', 'ArrowDown', etc.)
+        
+    Returns:
+        dict: Result of the operation
+    """
+    try:
+        from selenium.webdriver.common.keys import Keys
+        from selenium.webdriver.common.action_chains import ActionChains
+        
+        # Map common key names to Keys constants
+        key_mapping = {
+            'Enter': Keys.ENTER,
+            'Tab': Keys.TAB,
+            'Escape': Keys.ESCAPE,
+            'Space': Keys.SPACE,
+            'Backspace': Keys.BACKSPACE,
+            'Delete': Keys.DELETE,
+            'ArrowUp': Keys.ARROW_UP,
+            'ArrowDown': Keys.ARROW_DOWN,
+            'ArrowLeft': Keys.ARROW_LEFT,
+            'ArrowRight': Keys.ARROW_RIGHT,
+            'Home': Keys.HOME,
+            'End': Keys.END,
+            'PageUp': Keys.PAGE_UP,
+            'PageDown': Keys.PAGE_DOWN
+        }
+        
+        if key not in key_mapping:
+            return {
+                "success": False,
+                "error": f"Unknown key '{key}'. Available keys: {list(key_mapping.keys())}"
+            }
+        
+        # Create ActionChains and press the key
+        actions = ActionChains(driver)
+        actions.send_keys(key_mapping[key]).perform()
+        
+        return {
+            "success": True,
+            "message": f"Successfully pressed key '{key}'",
+            "key_pressed": key
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to press key '{key}': {str(e)}"
+        }
+
+    """
+    Extract all visible text from the current page.
+    
+    Args:
+        driver: Chrome WebDriver instance
+        
+    Returns:
+        dict: Page text content
+    """
+    try:
+        # Get all text content
+        page_text = driver.find_element(By.TAG_NAME, "body").text
+        
+        # Get page title
+        page_title = driver.title
+        
+        # Get current URL
+        current_url = driver.current_url
+        
+        return {
+            "success": True,
+            "page_title": page_title,
+            "current_url": current_url,
+            "text_content": page_text,
+            "text_length": len(page_text)
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to extract page text: {str(e)}"
+        }
+
+def open_link_in_current_tab(driver: webdriver.Chrome, url: str) -> dict:
+    """
+    Navigate to a specific URL in the current browser tab.
+    
+    Args:
+        driver: Chrome WebDriver instance
+        url: The URL to navigate to (must include http:// or https://)
+        
+    Returns:
+        dict: Result of the navigation operation
+    """
+    try:
+        # Validate URL format
+        if not url.startswith(('http://', 'https://')):
+            return {
+                "success": False,
+                "error": "URL must start with http:// or https://"
+            }
+        
+        # Navigate to the URL in the current tab
+        driver.get(url)
+        
+        # Wait a moment for the page to load
+        import time
+        time.sleep(2)
+        
+        return {
+            "success": True,
+            "message": f"Successfully navigated to {url}",
+            "current_url": driver.current_url,
+            "page_title": driver.title
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to navigate to {url}: {str(e)}"
+        }
+
 # Browser tools available to the agent
 BROWSER_TOOLS = {
     "click_element": {
@@ -638,6 +1001,55 @@ BROWSER_TOOLS = {
         "description": "Get detailed information about a discovered element",
         "parameters": {
             "element_label": {"type": "string", "required": True, "description": "The label of the element to inspect"}
+        }
+    },
+    "fill_input_field": {
+        "name": "fill_input_field",
+        "description": "Fill an input field with text",
+        "parameters": {
+            "element_label": {"type": "string", "required": True, "description": "The label of the input element"},
+            "text": {"type": "string", "required": True, "description": "Text to fill in the input field"}
+        }
+    },
+    "select_dropdown_option": {
+        "name": "select_dropdown_option",
+        "description": "Select an option from a dropdown/select element",
+        "parameters": {
+            "element_label": {"type": "string", "required": True, "description": "The label of the select element"},
+            "option_text": {"type": "string", "required": True, "description": "Text of the option to select"}
+        }
+    },
+    "check_checkbox": {
+        "name": "check_checkbox",
+        "description": "Check or uncheck a checkbox",
+        "parameters": {
+            "element_label": {"type": "string", "required": True, "description": "The label of the checkbox element"}
+        }
+    },
+    "hover_element": {
+        "name": "hover_element",
+        "description": "Hover over an element to trigger hover effects",
+        "parameters": {
+            "element_label": {"type": "string", "required": True, "description": "The label of the element to hover"}
+        }
+    },
+    "press_key": {
+        "name": "press_key",
+        "description": "Press a key on the keyboard",
+        "parameters": {
+            "key": {"type": "string", "required": True, "description": "Key to press (e.g., 'Enter', 'Tab', 'Escape', 'ArrowDown', etc.)"}
+        }
+    },
+    "get_page_text": {
+        "name": "get_page_text",
+        "description": "Extract all visible text from the current page",
+        "parameters": {}
+    },
+    "open_link_in_current_tab": {
+        "name": "open_link_in_current_tab",
+        "description": "Navigate to a specific URL in the current browser tab",
+        "parameters": {
+            "url": {"type": "string", "required": True, "description": "The URL to navigate to (must include http:// or https://)"}
         }
     }
 }

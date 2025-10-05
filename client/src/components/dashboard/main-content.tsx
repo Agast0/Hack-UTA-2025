@@ -20,7 +20,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useTeamStore } from '@/lib/store';
-import { mockAgentRuns } from '@/lib/mock-data';
 import { AgentRun } from '@/types/bug';
 import { columns } from './audit-columns';
 import { BugFindingsModal } from './bug-findings-modal';
@@ -33,14 +32,16 @@ export function MainContent() {
   const [includeSubdomains, setIncludeSubdomains] = useState(false);
 
   const selectedTeam = teams.find(team => team.id === selectedTeamId);
-  const teamRuns = selectedTeamId 
-    ? mockAgentRuns.filter(run => run.id === selectedTeamId)
-    : [];
+  
+  // TODO: Replace with actual agent runs API when backend supports it
+  // For now, we'll show an empty state since agent runs aren't implemented in the backend yet
+  const teamRuns: AgentRun[] = [];
 
   const handleCreateAudit = () => {
     if (targetUrl.trim()) {
-      // In a real app, this would make an API call
+      // TODO: Implement actual API call to create agent run
       console.log('Creating audit for:', targetUrl);
+      console.log('Settings:', { maxDepth, includeSubdomains });
       setTargetUrl('');
       setIsCreateDialogOpen(false);
     }
@@ -90,13 +91,13 @@ export function MainContent() {
 
   if (!selectedTeamId) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
+      <div className="flex-1 flex items-center justify-center bg-background">
         <div className="text-center">
-          <Bug className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <Bug className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
             Select a Team
           </h3>
-          <p className="text-gray-500">
+          <p className="text-muted-foreground">
             Choose a team from the sidebar to start hunting bugs
           </p>
         </div>
@@ -105,16 +106,16 @@ export function MainContent() {
   }
 
   return (
-    <div className="flex-1 bg-gray-50 p-6">
+    <div className="flex-1 bg-background p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 {selectedTeam?.name}
               </h1>
-              <p className="text-gray-600">
-                {selectedTeam?.description || 'Team workspace'}
+              <p className="text-muted-foreground">
+                {selectedTeam?.team_type || 'Team workspace'}
               </p>
             </div>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -182,11 +183,16 @@ export function MainContent() {
             </CardHeader>
             <CardContent>
               {teamRuns.length > 0 ? (
-                <DataTable columns={auditColumns} data={teamRuns} />
+                <DataTable
+                  columns={auditColumns}
+                  data={teamRuns}
+                  filterColumnId="targetUrl"
+                  filterPlaceholder="Filter URLs..."
+                />
               ) : (
                 <div className="text-center py-8">
-                  <Bug className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No audits yet. Create your first audit to get started!</p>
+                  <Bug className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No audits yet. Create your first audit to get started!</p>
                 </div>
               )}
             </CardContent>

@@ -1,5 +1,6 @@
 import os
 import logging
+from datetime import datetime
 from typing import List, Optional
 
 from beanie import PydanticObjectId, init_beanie
@@ -10,9 +11,21 @@ from motor.motor_asyncio import AsyncIOMotorClient
 
 # Import all models
 from models import (
+    AgentRun,
+    AgentRunCreate,
+    AgentRunInfo,
+    AgentRunResponse,
+    AgentRunUpdate,
+    AuditStatusEnum,
+    BugFinding,
+    BugFindingInfo,
+    BugFindingResponse,
+    BugFindingUpdate,
     BugReport,
     BugReportCreate,
     BugReportUpdate,
+    BugSeverityEnum,
+    BugStatusEnum,
     DeleteResponse,
     SyncResponse,
     Team,
@@ -21,8 +34,13 @@ from models import (
     TeamJoin,
     TeamResponse,
     TeamTypeEnum,
+    TestCase,
+    TestCaseCreate,
+    TestCaseInfo,
+    TestCaseStatusEnum,
     User,
     UserCreate,
+    UserInfo,
     UserResponse,
 )
 
@@ -39,11 +57,13 @@ def main():
     )
 
     # Check for required environment variables
-    if not os.getenv('GOOGLE_API_KEY'):
+    google_api_key = os.getenv('GOOGLE_API_KEY')
+    if not google_api_key:
         print(
-            '\033[31m[ERROR] GOOGLE_API_KEY environment variable is required\033[0m'
+            '\033[33m[WARNING] GOOGLE_API_KEY environment variable not set - AI agent features will be disabled\033[0m'
         )
-        exit(1)
+    else:
+        print('Google API key found - AI agent features enabled')
 
     print('Starting Agentuity Agent FastAPI server...')
     print('API Documentation available at: http://localhost:8000/docs')
@@ -80,9 +100,10 @@ async def startup_db_client():
         )
         exit(1)
     client = AsyncIOMotorClient(mongo_uri)
-    # Add the BugReport and Team models to the list for Beanie initialization
+    # Add all models to the list for Beanie initialization
     await init_beanie(
-        database=client[db_name], document_models=[User, BugReport, Team]
+        database=client[db_name], 
+        document_models=[User, Team, BugReport, AgentRun, TestCase, BugFinding]
     )
     print('MongoDB connection established successfully!')
 
@@ -113,7 +134,7 @@ async def create_user(user_data: UserCreate):
     if existing_user:
         # Manually fetch the team if the link is not already a full document
         if existing_user.team and not isinstance(existing_user.team, Team):
-            existing_user.team = await Team.get(existing_user.team.id)
+            existing_user.team = await Team.get(existing_user.team.ref.id)
         return {'message': 'User already exists', 'user': existing_user}
 
     new_user = User(
@@ -132,7 +153,7 @@ async def get_user(auth0Id: str):
     user = await get_user_by_auth0_id(auth0Id)
     # Manual, safe link fetching
     if user.team and not isinstance(user.team, Team):
-        user.team = await Team.get(user.team.id)
+        user.team = await Team.get(user.team.ref.id)
     return user
 
 
@@ -144,7 +165,7 @@ async def get_users():
     for user in users:
         if user.team and not isinstance(user.team, Team):
             # Replace the Link object with the full Team document
-            user.team = await Team.get(user.team.id)
+            user.team = await Team.get(user.team.ref.id)
     return users
 
 
@@ -207,7 +228,7 @@ async def join_team(team_id: PydanticObjectId, join_data: TeamJoin):
     fetched_members = []
     for member_link in team_to_join.members:
         if not isinstance(member_link, User):
-            member = await User.get(member_link.id)
+            member = await User.get(member_link.ref.id)
             if member:
                 fetched_members.append(member)
     team_to_join.members = fetched_members
@@ -233,7 +254,7 @@ async def get_teams(
             fetched_members = []
             for member_link in team.members:
                 if not isinstance(member_link, User):
-                    member = await User.get(member_link.id)
+                    member = await User.get(member_link.ref.id)
                     if member:
                         fetched_members.append(member)
             team.members = fetched_members
@@ -252,7 +273,7 @@ async def submit_bug_report(report_data: BugReportCreate):
             detail='User must be on a team to create a bug report.',
         )
     # The creator.team is a Link, we need the actual document for the BugReport
-    team_doc = await Team.get(creator.team.id)
+    team_doc = await Team.get(creator.team.ref.id)
     if not team_doc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -266,6 +287,37 @@ async def submit_bug_report(report_data: BugReportCreate):
     )
     await new_report.insert()
     return new_report
+
+
+# Helper to persist agent-style bug reports
+async def persist_agent_bug_reports(agent_reports: list):
+    """Accepts a list of agent-style bug reports and stores them.
+    Expects objects with: title, description, roast, severity, reproduction_steps[], team_id (internal Team id).
+    """
+    for r in agent_reports or []:
+        # Resolve team by internal DB id (string ObjectId)
+        team_id_str = r.get('team_id')
+        if not team_id_str:
+            continue
+        try:
+            team_doc = await Team.get(PydanticObjectId(team_id_str))
+        except Exception:
+            team_doc = await Team.get(team_id_str)
+        if not team_doc:
+            continue
+
+        steps = r.get('reproduction_steps') or []
+        # Build document
+        doc = BugReport(
+            title=r.get('title', 'Untitled Bug'),
+            description=r.get('description', ''),
+            roast=r.get('roast'),
+            severity=r.get('severity'),
+            reproduction_steps=steps,
+            team_id=team_id_str,
+            team=team_doc,
+        )
+        await doc.insert()
 
 
 @app.get('/api/bugs', response_model=List[BugReport])
@@ -332,6 +384,282 @@ async def delete_bug_report(bug_id: PydanticObjectId):
         )
     await report.delete()
     return {'message': 'Bug report deleted successfully.'}
+
+
+# --- NEW: BugZooka Workflow API Endpoints ---
+
+@app.post('/api/audits', response_model=AgentRunResponse)
+async def create_audit(audit_data: AgentRunCreate):
+    """Create a new audit (AgentRun) with test cases."""
+    # Get the creator user
+    creator = await get_user_by_auth0_id(audit_data.creator_auth0Id)
+    
+    if not creator.team:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='User must be on a team to create an audit.',
+        )
+    
+    # Create test cases first
+    test_cases = []
+    for test_case_data in audit_data.test_cases:
+        test_case = TestCase(
+            name=test_case_data.name,
+            expected_output=test_case_data.expected_output,
+            status=TestCaseStatusEnum.QUEUED
+        )
+        await test_case.save()
+        test_cases.append(test_case)
+    
+    # Create the agent run
+    agent_run = AgentRun(
+        team=creator.team,
+        target_url=audit_data.target_url,
+        created_by=creator,
+        status=AuditStatusEnum.QUEUED,
+        test_cases=test_cases,
+        settings=audit_data.settings or {}
+    )
+    await agent_run.save()
+    
+    # Convert to response format
+    agent_run_info = await convert_agent_run_to_info(agent_run)
+    
+    return {'message': 'Audit created successfully', 'agent_run': agent_run_info}
+
+
+@app.get('/api/audits', response_model=List[AgentRunInfo])
+async def get_audits(
+    team_id: Optional[PydanticObjectId] = Query(None, description="Filter by team ID"),
+    status: Optional[AuditStatusEnum] = Query(None, description="Filter by status"),
+    created_by: Optional[str] = Query(None, description="Filter by creator Auth0 ID")
+):
+    """Get all audits with optional filtering."""
+    query_conditions = []
+    
+    if team_id:
+        team = await Team.get(team_id)
+        if team:
+            query_conditions.append(AgentRun.team == team)
+    
+    if status:
+        query_conditions.append(AgentRun.status == status)
+    
+    if created_by:
+        creator = await get_user_by_auth0_id(created_by)
+        query_conditions.append(AgentRun.created_by == creator)
+    
+    query = AgentRun.find(*query_conditions) if query_conditions else AgentRun.find_all()
+    audits = await query.to_list()
+    
+    # Convert to response format
+    audit_infos = []
+    for audit in audits:
+        audit_info = await convert_agent_run_to_info(audit)
+        audit_infos.append(audit_info)
+    
+    return audit_infos
+
+
+@app.get('/api/audits/{audit_id}', response_model=AgentRunInfo)
+async def get_audit(audit_id: PydanticObjectId):
+    """Get a specific audit by ID."""
+    audit = await AgentRun.get(audit_id)
+    if not audit:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Audit not found.',
+        )
+    
+    audit_info = await convert_agent_run_to_info(audit)
+    return audit_info
+
+
+@app.put('/api/audits/{audit_id}', response_model=AgentRunInfo)
+async def update_audit(audit_id: PydanticObjectId, audit_update: AgentRunUpdate):
+    """Update an audit's status or completion time."""
+    audit = await AgentRun.get(audit_id)
+    if not audit:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Audit not found.',
+        )
+    
+    update_data = audit_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(audit, key, value)
+    
+    await audit.save()
+    
+    audit_info = await convert_agent_run_to_info(audit)
+    return audit_info
+
+
+@app.get('/api/audits/{audit_id}/bug-findings', response_model=List[BugFindingInfo])
+async def get_audit_bug_findings(audit_id: PydanticObjectId):
+    """Get all bug findings for a specific audit."""
+    audit = await AgentRun.get(audit_id)
+    if not audit:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Audit not found.',
+        )
+    
+    # Fetch bug findings
+    bug_findings = []
+    for bug_link in audit.bug_findings:
+        if not isinstance(bug_link, BugFinding):
+            try:
+                bug = await BugFinding.get(bug_link.ref.id)
+                if bug:
+                    bug_findings.append(bug)
+            except Exception as e:
+                print(f"Error fetching bug finding: {e}")
+                continue
+        else:
+            bug_findings.append(bug_link)
+    
+    # Convert to response format
+    bug_infos = []
+    for bug in bug_findings:
+        bug_info = await convert_bug_finding_to_info(bug)
+        bug_infos.append(bug_info)
+    
+    return bug_infos
+
+
+@app.put('/api/bug-findings/{bug_id}', response_model=BugFindingResponse)
+async def update_bug_finding(bug_id: PydanticObjectId, bug_update: BugFindingUpdate):
+    """Update a bug finding's status (confirm/reject)."""
+    bug = await BugFinding.get(bug_id)
+    if not bug:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Bug finding not found.',
+        )
+    
+    # Get the reviewer
+    reviewer = await get_user_by_auth0_id(bug_update.reviewer_auth0Id)
+    
+    # Update status and reviewer info
+    bug.status = bug_update.status
+    if bug_update.status == BugStatusEnum.CONFIRMED:
+        bug.confirmed_by = reviewer
+        bug.confirmed_at = datetime.utcnow()
+        bug.rejected_by = None
+        bug.rejected_at = None
+    elif bug_update.status == BugStatusEnum.REJECTED:
+        bug.rejected_by = reviewer
+        bug.rejected_at = datetime.utcnow()
+        bug.confirmed_by = None
+        bug.confirmed_at = None
+    
+    await bug.save()
+    
+    bug_info = await convert_bug_finding_to_info(bug)
+    return {'message': 'Bug finding updated successfully', 'bug_finding': bug_info}
+
+
+# --- Helper Functions for Response Conversion ---
+
+async def convert_agent_run_to_info(agent_run: AgentRun) -> AgentRunInfo:
+    """Convert AgentRun document to AgentRunInfo response model."""
+    # Fetch created_by user
+    created_by_user = agent_run.created_by
+    if not isinstance(created_by_user, User):
+        try:
+            created_by_user = await User.get(created_by_user.ref.id)
+        except Exception as e:
+            print(f"Error fetching created_by user: {e}")
+            created_by_user = None
+    
+    # Fetch test cases
+    test_cases = []
+    for test_link in agent_run.test_cases:
+        if not isinstance(test_link, TestCase):
+            try:
+                test_case = await TestCase.get(test_link.ref.id)
+                if test_case:
+                    test_cases.append(test_case)
+            except Exception as e:
+                print(f"Error fetching test case: {e}")
+                continue
+        else:
+            test_cases.append(test_link)
+    
+    # Fetch bug findings
+    bug_findings = []
+    for bug_link in agent_run.bug_findings:
+        if not isinstance(bug_link, BugFinding):
+            try:
+                bug = await BugFinding.get(bug_link.ref.id)
+                if bug:
+                    bug_findings.append(bug)
+            except Exception as e:
+                print(f"Error fetching bug finding: {e}")
+                continue
+        else:
+            bug_findings.append(bug_link)
+    
+    # Convert to info models
+    test_case_infos = [TestCaseInfo.model_validate(tc) for tc in test_cases]
+    bug_finding_infos = []
+    for bug in bug_findings:
+        bug_info = await convert_bug_finding_to_info(bug)
+        bug_finding_infos.append(bug_info)
+    
+    return AgentRunInfo(
+        id=agent_run.id,
+        target_url=agent_run.target_url,
+        created_by=UserInfo.model_validate(created_by_user) if created_by_user else None,
+        status=agent_run.status,
+        created_at=agent_run.created_at,
+        completed_at=agent_run.completed_at,
+        test_cases=test_case_infos,
+        bug_findings=bug_finding_infos,
+        settings=agent_run.settings
+    )
+
+
+async def convert_bug_finding_to_info(bug: BugFinding) -> BugFindingInfo:
+    """Convert BugFinding document to BugFindingInfo response model."""
+    # Fetch confirmed_by user
+    confirmed_by_user = None
+    if bug.confirmed_by:
+        if not isinstance(bug.confirmed_by, User):
+            try:
+                confirmed_by_user = await User.get(bug.confirmed_by.ref.id)
+            except Exception as e:
+                print(f"Error fetching confirmed_by user: {e}")
+        else:
+            confirmed_by_user = bug.confirmed_by
+    
+    # Fetch rejected_by user
+    rejected_by_user = None
+    if bug.rejected_by:
+        if not isinstance(bug.rejected_by, User):
+            try:
+                rejected_by_user = await User.get(bug.rejected_by.ref.id)
+            except Exception as e:
+                print(f"Error fetching rejected_by user: {e}")
+        else:
+            rejected_by_user = bug.rejected_by
+    
+    return BugFindingInfo(
+        id=bug.id,
+        title=bug.title,
+        description=bug.description,
+        steps_to_reproduce=bug.steps_to_reproduce,
+        severity=bug.severity,
+        roast_message=bug.roast_message,
+        screenshot_urls=bug.screenshot_urls,
+        status=bug.status,
+        confirmed_by=UserInfo.model_validate(confirmed_by_user) if confirmed_by_user else None,
+        rejected_by=UserInfo.model_validate(rejected_by_user) if rejected_by_user else None,
+        confirmed_at=bug.confirmed_at,
+        rejected_at=bug.rejected_at,
+        created_at=bug.created_at
+    )
 
 
 if __name__ == '__main__':

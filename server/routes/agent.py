@@ -3,10 +3,11 @@ Agent-specific routes for AI agent interactions
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Any
 import os
 import logging
 from agentuity_agents.my_agent.agent import run
+from main import persist_agent_bug_reports
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -17,12 +18,18 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 
+class TestCase(BaseModel):
+    what_to_test: str
+    expected_output: Optional[str] = None
+
 class AgentRequestModel(BaseModel):
-    text: str
+    url: str
     content_type: Optional[str] = "text/plain"
+    team_id: str
+    test_cases: Optional[List[TestCase]] = None
 
 class AgentResponseModel(BaseModel):
-    response: str
+    response: Any
     success: bool
     error: Optional[str] = None
 
@@ -40,9 +47,20 @@ async def run_agent(request: AgentRequestModel):
         
         # Create FastAPI-compatible request/response objects
         class FastAPIRequest:
-            def __init__(self, text: str, content_type: str = "text/plain"):
-                self.data = text  # Direct string for FastAPI
+            def __init__(self, url: str, content_type: str = "text/plain", tester_user_id: str = None, test_cases: list = None):
                 self.content_type = content_type
+                self.url = url
+                self.team_id = tester_user_id
+                self.test_cases = test_cases
+                
+                # Create a proper data object with both url and test_cases
+                class RequestData:
+                    def __init__(self, url, test_cases, tester_user_id):
+                        self.url = url
+                        self.test_cases = test_cases
+                        self.team_id = tester_user_id
+                
+                self.data = RequestData(url, test_cases, tester_user_id)
         
         class FastAPIResponse:
             def __init__(self):
@@ -52,8 +70,8 @@ async def run_agent(request: AgentRequestModel):
                 self._response = response_text
                 return self
             
-            def json(self, data: dict):
-                self._response = str(data)
+            def json(self, data):
+                self._response = data
                 return self
             
             def get_response(self):
@@ -64,14 +82,28 @@ async def run_agent(request: AgentRequestModel):
                 self.logger = logger
         
         # Create FastAPI-compatible objects
-        fastapi_request = FastAPIRequest(request.text, request.content_type)
+        fastapi_request = FastAPIRequest(request.url, request.content_type, request.team_id, request.test_cases)
         fastapi_response = FastAPIResponse()
         fastapi_context = FastAPIContext()
+
+        # print fields here for debuging
+        print(f"URL: {request.url}")
+        print(f"Content type: {request.content_type}")
+        print(f"Tester user ID: {request.team_id}")
+        print(f"Test cases: {request.test_cases}")
         
         # Run the agent with FastAPI-compatible objects
         await run(fastapi_request, fastapi_response, fastapi_context)
         
         response_text = fastapi_response.get_response()
+        if response_text is None:
+            response_text = "Agent execution was skipped (debugging mode)"
+        # Persist agent-style bug reports if present (array)
+        try:
+            if isinstance(response_text, list) and response_text and isinstance(response_text[0], dict) and response_text[0].get('title'):
+                await persist_agent_bug_reports(response_text)
+        except Exception as e:
+            logger.error(f"Failed to persist agent bug reports: {e}")
         
         return AgentResponseModel(
             response=response_text,
