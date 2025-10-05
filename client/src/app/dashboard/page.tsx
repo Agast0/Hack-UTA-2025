@@ -7,10 +7,24 @@ import { Header } from '@/components/layout/header';
 import { Sidebar } from '@/components/layout/sidebar';
 import { MobileTeamSelector } from '@/components/layout/mobile-team-selector';
 import { MainContent } from '@/components/dashboard/main-content';
+import { useAuthStore } from '@/lib/store';
 
 export default function DashboardPage() {
-  const { isAuthenticated, isLoading } = useAuth0();
+  const { isAuthenticated, isLoading, user: auth0User } = useAuth0();
+  const { user, syncUser, isAuthenticated: storeAuthenticated } = useAuthStore();
   const router = useRouter();
+
+  // Sync Auth0 user with backend
+  useEffect(() => {
+    if (isAuthenticated && auth0User && !user) {
+      syncUser({
+        sub: auth0User.sub || '',
+        email: auth0User.email || '',
+        name: auth0User.name,
+        picture: auth0User.picture,
+      }).catch(console.error);
+    }
+  }, [isAuthenticated, auth0User, user, syncUser]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

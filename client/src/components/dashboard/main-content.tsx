@@ -20,7 +20,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { useTeamStore } from '@/lib/store';
-import { mockAgentRuns } from '@/lib/mock-data';
 import { AgentRun } from '@/types/bug';
 import { columns } from './audit-columns';
 import { BugFindingsModal } from './bug-findings-modal';
@@ -33,14 +32,16 @@ export function MainContent() {
   const [includeSubdomains, setIncludeSubdomains] = useState(false);
 
   const selectedTeam = teams.find(team => team.id === selectedTeamId);
-  const teamRuns = selectedTeamId
-    ? mockAgentRuns.filter((run) => run.teamId === selectedTeamId)
-    : [];
+  
+  // TODO: Replace with actual agent runs API when backend supports it
+  // For now, we'll show an empty state since agent runs aren't implemented in the backend yet
+  const teamRuns: AgentRun[] = [];
 
   const handleCreateAudit = () => {
     if (targetUrl.trim()) {
-      // In a real app, this would make an API call
+      // TODO: Implement actual API call to create agent run
       console.log('Creating audit for:', targetUrl);
+      console.log('Settings:', { maxDepth, includeSubdomains });
       setTargetUrl('');
       setIsCreateDialogOpen(false);
     }
@@ -114,7 +115,7 @@ export function MainContent() {
                 {selectedTeam?.name}
               </h1>
               <p className="text-muted-foreground">
-                {selectedTeam?.description || 'Team workspace'}
+                {selectedTeam?.team_type || 'Team workspace'}
               </p>
             </div>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

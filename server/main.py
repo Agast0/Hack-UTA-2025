@@ -39,11 +39,13 @@ def main():
     )
 
     # Check for required environment variables
-    if not os.getenv('GOOGLE_API_KEY'):
+    google_api_key = os.getenv('GOOGLE_API_KEY')
+    if not google_api_key:
         print(
-            '\033[31m[ERROR] GOOGLE_API_KEY environment variable is required\033[0m'
+            '\033[33m[WARNING] GOOGLE_API_KEY environment variable not set - AI agent features will be disabled\033[0m'
         )
-        exit(1)
+    else:
+        print('Google API key found - AI agent features enabled')
 
     print('Starting Agentuity Agent FastAPI server...')
     print('API Documentation available at: http://localhost:8000/docs')
@@ -113,7 +115,11 @@ async def create_user(user_data: UserCreate):
     if existing_user:
         # Manually fetch the team if the link is not already a full document
         if existing_user.team and not isinstance(existing_user.team, Team):
-            existing_user.team = await Team.get(existing_user.team.id)
+            try:
+                existing_user.team = await Team.get(existing_user.team.ref.id)
+            except Exception as e:
+                print(f"Error fetching team: {e}")
+                existing_user.team = None
         return {'message': 'User already exists', 'user': existing_user}
 
     new_user = User(
@@ -132,7 +138,11 @@ async def get_user(auth0Id: str):
     user = await get_user_by_auth0_id(auth0Id)
     # Manual, safe link fetching
     if user.team and not isinstance(user.team, Team):
-        user.team = await Team.get(user.team.id)
+        try:
+            user.team = await Team.get(user.team.ref.id)
+        except Exception as e:
+            print(f"Error fetching team: {e}")
+            user.team = None
     return user
 
 
@@ -144,7 +154,11 @@ async def get_users():
     for user in users:
         if user.team and not isinstance(user.team, Team):
             # Replace the Link object with the full Team document
-            user.team = await Team.get(user.team.id)
+            try:
+                user.team = await Team.get(user.team.ref.id)
+            except Exception as e:
+                print(f"Error fetching team: {e}")
+                user.team = None
     return users
 
 
@@ -207,9 +221,16 @@ async def join_team(team_id: PydanticObjectId, join_data: TeamJoin):
     fetched_members = []
     for member_link in team_to_join.members:
         if not isinstance(member_link, User):
-            member = await User.get(member_link.id)
-            if member:
-                fetched_members.append(member)
+            # Handle Beanie Link objects
+            try:
+                member = await User.get(member_link.ref.id)
+                if member:
+                    fetched_members.append(member)
+            except Exception as e:
+                print(f"Error fetching member: {e}")
+                continue
+        else:
+            fetched_members.append(member_link)
     team_to_join.members = fetched_members
 
     return {'message': 'Successfully joined team', 'team': team_to_join}
@@ -233,9 +254,16 @@ async def get_teams(
             fetched_members = []
             for member_link in team.members:
                 if not isinstance(member_link, User):
-                    member = await User.get(member_link.id)
-                    if member:
-                        fetched_members.append(member)
+                    # Handle Beanie Link objects
+                    try:
+                        member = await User.get(member_link.ref.id)
+                        if member:
+                            fetched_members.append(member)
+                    except Exception as e:
+                        print(f"Error fetching member: {e}")
+                        continue
+                else:
+                    fetched_members.append(member_link)
             team.members = fetched_members
     return teams
 
@@ -252,7 +280,7 @@ async def submit_bug_report(report_data: BugReportCreate):
             detail='User must be on a team to create a bug report.',
         )
     # The creator.team is a Link, we need the actual document for the BugReport
-    team_doc = await Team.get(creator.team.id)
+    team_doc = await Team.get(creator.team.ref.id)
     if not team_doc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

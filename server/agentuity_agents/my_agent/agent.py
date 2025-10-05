@@ -13,9 +13,10 @@ from .tools import (
 api_key = os.getenv("GOOGLE_API_KEY")
 
 if not api_key:
-    raise ValueError("GOOGLE_API_KEY environment variable not set.")
-
-client = genai.Client(api_key=api_key)
+    print("WARNING: GOOGLE_API_KEY environment variable not set. AI agent features will be disabled.")
+    client = None
+else:
+    client = genai.Client(api_key=api_key)
 
 # System prompt and tools are now imported from separate modules
 
@@ -276,6 +277,9 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                 ]
             
             # Generate AI response
+            if client is None:
+                return response.text("❌ AI agent features are disabled. GOOGLE_API_KEY environment variable is not set.")
+            
             result = client.models.generate_content(
                 model="gemini-2.0-flash",
                 contents=contents
