@@ -14,7 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       domain="dev-h52hz8oszd0xc8yd.us.auth0.com"
       clientId="2Y14d36migYyogqJARf1X7szyqClwTc4"
       authorizationParams={{
-        redirect_uri: 'http://localhost:3000/callback'
+        redirect_uri: 'http://localhost:3000/dashboard'
       }}
       useRefreshTokens={true}
       cacheLocation="localstorage"

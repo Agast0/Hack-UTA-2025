@@ -21,7 +21,7 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
 
   const getUserName = (userId: string) => {
     const user = mockUsers.find(u => u.id === userId);
-    return user ? user.name : userId;
+    return user?.name || userId;
   };
 
   const getUser = (userId: string) => {
@@ -115,9 +115,9 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
           ? { 
               ...bug, 
               reproduction_steps: [
-                ...bug.reproduction_steps,
+                ...(bug.reproduction_steps || []),
                 {
-                  step_number: bug.reproduction_steps.length + 1,
+                  step_number: (bug.reproduction_steps || []).length + 1,
                   text: '',
                   image_url: ''
                 }
@@ -134,7 +134,7 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
         bug.id === bugId 
           ? { 
               ...bug, 
-              reproduction_steps: bug.reproduction_steps
+              reproduction_steps: (bug.reproduction_steps || [])
                 .filter((_, index) => index !== stepIndex)
                 .map((step, index) => ({ ...step, step_number: index + 1 }))
             }
@@ -149,7 +149,7 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
         bug.id === bugId 
           ? { 
               ...bug, 
-              reproduction_steps: bug.reproduction_steps.map((step, index) => 
+              reproduction_steps: (bug.reproduction_steps || []).map((step, index) => 
                 index === stepIndex 
                   ? { ...step, [field]: value }
                   : step
@@ -213,7 +213,7 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
                       {run.createdBy ? (
                         <div className="flex items-center space-x-2">
                           <Avatar className="h-6 w-6">
-                            <AvatarImage src={getUser(run.createdBy)?.avatar} alt={getUserName(run.createdBy)} />
+                            <AvatarImage src={getUser(run.createdBy)?.picture} alt={getUserName(run.createdBy)} />
                             <AvatarFallback className="text-xs">
                               {getUserName(run.createdBy).split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
@@ -232,7 +232,6 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 pt-0">
-                {/* Roast Message - Positioned before reproduction steps */}
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 dark:bg-yellow-900/20 dark:border-yellow-800 animate-slam -mt-4 roast-trigger">
                   <div className="flex items-start space-x-2">
                     <Bug className="h-4 w-4 text-yellow-600 mt-0.5" />
@@ -260,7 +259,7 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
                 <div>
                   <h4 className="font-medium mb-1 text-sm">Reproduction Steps:</h4>
                   <div className="space-y-4">
-                    {finding.reproduction_steps.map((step, stepIndex) => (
+                    {(finding.reproduction_steps || []).map((step, stepIndex) => (
                       <div key={stepIndex} className="flex items-start space-x-3 p-3 border rounded-lg bg-muted/30">
                         <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium">
                           {step.step_number}
@@ -294,10 +293,11 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
                           ) : (
                             <>
                               <p className="text-sm text-foreground mb-2">{step.text}</p>
+                              {/* --- VISUAL FIX: Increased image height from h-32 to h-48 --- */}
                               <img 
                                 src={step.image_url} 
                                 alt={`Step ${step.step_number} screenshot`}
-                                className="w-full max-w-md h-32 object-cover rounded border"
+                                className="w-full max-w-md h-48 object-cover rounded border"
                               />
                             </>
                           )}
@@ -318,9 +318,6 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
                   </div>
                 </div>
 
-
-
-                {/* Action Buttons - Always Available */}
                 <div className="flex items-center space-x-2 pt-3 border-t">
                   <Button
                     size="sm"
@@ -391,8 +388,6 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
                     </Button>
                   )}
                 </div>
-
-
 
                 {index < bugFindings.length - 1 && (
                   <Separator className="my-2" />

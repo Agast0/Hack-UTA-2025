@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useTeamStore, useAuthStore } from '@/lib/store';
+import { useTeamStore, useAuthStore, useBugsStore } from '@/lib/store';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Team } from '@/types/bug';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -33,7 +33,9 @@ export function Sidebar() {
   const router = useRouter();
   const { teams, selectedTeamId, setSelectedTeam, deleteTeam, addUserToTeam, removeUserFromTeam, getAvailableUsers, renameTeam, fetchTeams, createTeam, isLoading, error } = useTeamStore();
   const { user, syncUser } = useAuthStore();
+  const { bugReports, fetchBugReports } = useBugsStore();
   const { user: auth0User, isAuthenticated } = useAuth0();
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
@@ -44,6 +46,7 @@ export function Sidebar() {
   const [newTeamType, setNewTeamType] = useState<'front-end' | 'back-end'>('front-end');
   const [isCreating, setIsCreating] = useState(false);
   const [renameValue, setRenameValue] = useState('');
+  const [confirmedBugsCount, setConfirmedBugsCount] = useState(0);
 
   // Sync user with backend when Auth0 user is available
   useEffect(() => {
@@ -57,12 +60,21 @@ export function Sidebar() {
     }
   }, [isAuthenticated, auth0User, user, syncUser]);
 
-  // Fetch teams when user is available
+  // Fetch teams and approved bugs when user is available
   useEffect(() => {
     if (user) {
       fetchTeams().catch(console.error);
+      // Fetch bugs with status 'approved' to populate the count
+      fetchBugReports({ status: 'approved' });
     }
-  }, [user, fetchTeams]);
+  }, [user, fetchTeams, fetchBugReports]);
+
+  // Update the count whenever the bug reports in the store change
+  useEffect(() => {
+    // We filter here to ensure we only count the approved bugs
+    const approvedBugs = bugReports.filter(bug => bug.is_approved);
+    setConfirmedBugsCount(approvedBugs.length);
+  }, [bugReports]);
 
   const handleCreateTeam = async () => {
     if (newTeamName.trim() && user?.auth0Id) {
@@ -243,7 +255,7 @@ export function Sidebar() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-foreground">Confirmed Bugs</h2>
           <Badge variant="secondary" className="text-xs">
-            0 bugs
+            {confirmedBugsCount} bugs
           </Badge>
         </div>
         
@@ -265,7 +277,7 @@ export function Sidebar() {
                   </CardTitle>
                 </div>
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">
-                  0 bugs
+                  {confirmedBugsCount} bugs
                 </Badge>
               </div>
             </CardHeader>

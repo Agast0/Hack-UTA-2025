@@ -1,9 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 import logging
 import os
 from dotenv import load_dotenv
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
+from fastapi.middleware.cors import CORSMiddleware
 
 # Import route modules
 from routes.system import router as system_router
@@ -26,6 +27,20 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Preflight catch-all to satisfy browsers for any route
+@app.options('/{path:path}')
+def cors_preflight(path: str):
+    return Response(status_code=204)
 
 # --- Database Connection ---
 @app.on_event('startup')

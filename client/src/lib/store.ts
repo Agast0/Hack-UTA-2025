@@ -1,8 +1,11 @@
+// lib/store.ts
+
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, Team, AgentRun } from '@/types/bug';
-import { userApi, teamApi, ApiError } from './api';
+import { User, Team, AgentRun, BugReport } from '@/types/bug';
+import { userApi, teamApi, ApiError, bugApi, auditsApi } from '@/lib/api';
 
+// --- Interfaces for State ---
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
@@ -29,25 +32,35 @@ interface TeamState {
   renameTeam: (teamId: string, name: string) => void;
 }
 
+interface BugsState {
+  bugReports: BugReport[];
+  bugsLoading: boolean;
+  bugsError: string | null;
+  // --- FIX: Added 'team_id' to the allowed parameters ---
+  fetchBugReports: (params?: { status?: 'approved' | 'not_approved'; team_type?: 'front-end' | 'back-end'; team_id?: string }) => Promise<void>;
+  getBugReportsByTeamId: (teamId: string) => BugReport[];
+}
+
+interface RunsState {
+  runs: AgentRun[];
+  addRun: (run: AgentRun) => void;
+  updateRun: (runId: string, patch: Partial<AgentRun>) => void;
+  startAudit: (params: { url: string; teamId: string; testCases?: Array<{ what_to_test: string; expected_output?: string }>; contentType?: string }) => Promise<void>;
+}
+
+
+// --- Store Implementations (No changes below this line in this file) ---
+
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
-      login: async (email: string, password: string) => {
-        // This is now handled by Auth0, but keeping for compatibility
-        set({ isLoading: true, error: null });
-        try {
-          // In a real app, Auth0 handles authentication
-          // This is just a placeholder
-          set({ user: null, isAuthenticated: false, isLoading: false });
-          return false;
-        } catch (error) {
-          set({ error: error instanceof Error ? error.message : 'Login failed', isLoading: false });
-          return false;
-        }
+      login: async () => {
+        set({ isLoading: false });
+        return false;
       },
       logout: () => {
         set({ user: null, isAuthenticated: false, error: null });
@@ -56,44 +69,71 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await userApi.createUser(auth0Data);
-          set({ 
-            user: response.user, 
-            isAuthenticated: true, 
+          set({
+            user: response.user,
+            isAuthenticated: true,
             isLoading: false,
-            error: null 
+            error: null
           });
         } catch (error) {
           const errorMessage = error instanceof ApiError ? error.message : 'Failed to sync user';
-          set({ 
-            error: errorMessage, 
+          set({
+            error: errorMessage,
             isLoading: false,
-            isAuthenticated: false 
+            isAuthenticated: false
           });
           throw error;
         }
       },
     }),
-    {
-      name: 'auth-storage',
-    }
+    { name: 'auth-storage' }
   )
 );
 
-interface RunsState {
-  runs: AgentRun[];
-  addRun: (run: AgentRun) => void;
-  updateRun: (runId: string, patch: Partial<AgentRun>) => void;
-}
-
 export const useRunsStore = create<RunsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       runs: [],
       addRun: (run) => set((state) => ({ runs: [run, ...state.runs] })),
       updateRun: (runId, patch) =>
         set((state) => ({
           runs: state.runs.map((r) => (r.id === runId ? { ...r, ...patch } : r)),
         })),
+      
+      startAudit: async ({ url, teamId, testCases, contentType }) => {
+        const tempId = `temp-${Date.now()}`;
+        const optimisticRun: AgentRun = {
+          id: tempId,
+          teamId,
+          targetUrl: url,
+          createdBy: 'current_user',
+          settings: {},
+          status: 'running',
+          bugFindings: [],
+          createdAt: new Date(),
+        } as unknown as AgentRun;
+        set((state) => ({ runs: [optimisticRun, ...state.runs] }));
+
+        try {
+          const res = await auditsApi.createAudit({
+            url,
+            content_type: contentType ?? 'text/plain',
+            team_id: teamId,
+            test_cases: (testCases || []).map(tc => ({
+              what_to_test: tc.what_to_test,
+              expected_output: tc.expected_output,
+            })),
+          });
+          get().updateRun(tempId, {
+            status: res.success ? 'completed' : 'failed',
+            settings: { response: res.response } as any,
+          });
+        } catch (e: any) {
+          get().updateRun(tempId, { status: 'failed' });
+          console.error("Failed to start audit:", e);
+          throw e;
+        }
+      },
     }),
     { name: 'runs-storage' }
   )
@@ -101,7 +141,7 @@ export const useRunsStore = create<RunsState>()(
 
 export const useTeamStore = create<TeamState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       teams: [],
       selectedTeamId: null,
       isLoading: false,
@@ -139,9 +179,8 @@ export const useTeamStore = create<TeamState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await teamApi.joinTeam(teamId, userAuth0Id);
-          // Update the teams list with the updated team
           set((state) => ({
-            teams: state.teams.map(team => 
+            teams: state.teams.map(team =>
               team.id === teamId ? response.team : team
             ),
             isLoading: false,
@@ -165,8 +204,8 @@ export const useTeamStore = create<TeamState>()(
       },
       addUserToTeam: (teamId: string, user: User) => {
         set((state) => ({
-          teams: state.teams.map(team => 
-            team.id === teamId 
+          teams: state.teams.map(team =>
+            team.id === teamId
               ? {
                   ...team,
                   members: [...(team.members || []), user],
@@ -177,8 +216,8 @@ export const useTeamStore = create<TeamState>()(
       },
       removeUserFromTeam: (teamId: string, userId: string) => {
         set((state) => ({
-          teams: state.teams.map(team => 
-            team.id === teamId 
+          teams: state.teams.map(team =>
+            team.id === teamId
               ? {
                   ...team,
                   members: (team.members || []).filter(member => member.id !== userId),
@@ -188,7 +227,6 @@ export const useTeamStore = create<TeamState>()(
         }));
       },
       getAvailableUsers: (_teamId: string) => {
-        // Backend-driven app: populate from API when available. For now return empty.
         return [];
       },
       renameTeam: (teamId: string, name: string) => {
@@ -203,4 +241,29 @@ export const useTeamStore = create<TeamState>()(
       name: 'team-storage',
     }
   )
+);
+
+export const useBugsStore = create<BugsState>()(
+  (set, get) => ({
+    bugReports: [],
+    bugsLoading: false,
+    bugsError: null,
+    fetchBugReports: async (params) => {
+      set({ bugsLoading: true, bugsError: null });
+      try {
+        const bugs = await bugApi.getBugReports(params);
+        set({ bugReports: bugs, bugsLoading: false, bugsError: null });
+      } catch (error) {
+        const errorMessage = error instanceof ApiError ? error.message : 'Failed to fetch bug reports';
+        set({ bugsError: errorMessage, bugsLoading: false });
+        throw error;
+      }
+    },
+    getBugReportsByTeamId: (teamId: string) => {
+      return (get().bugReports || []).filter((b) => {
+        const t = (b as any).team;
+        return t && (t.id === teamId || t._id === teamId);
+      });
+    },
+  }),
 );

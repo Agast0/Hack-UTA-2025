@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,32 +13,34 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Header } from '@/components/layout/header';
-import { mockAgentRuns, mockUsers } from '@/lib/mock-data';
-import { BugFinding } from '@/types/bug';
+import { BugFinding, BugReport } from '@/types/bug';
+import { useBugsStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 
 export default function ConfirmedBugsPage() {
   const router = useRouter();
+  const { bugReports, fetchBugReports, bugsLoading } = useBugsStore();
   const [bugFindings, setBugFindings] = useState<BugFinding[]>([]);
 
-  // Get all confirmed bugs from all runs
-  const confirmedBugs = mockAgentRuns
-    .flatMap(run => run.bugFindings)
-    .filter(bug => bug.status === 'confirmed');
-
-  // Initialize bugFindings with confirmed bugs
   useEffect(() => {
-    setBugFindings(confirmedBugs);
-  }, []);
+    fetchBugReports({ status: 'approved' });
+  }, [fetchBugReports]);
 
-  const getUserName = (userId: string) => {
-    const user = mockUsers.find(u => u.id === userId);
-    return user ? user.name : userId;
-  };
+  // --- FIX: Cast `report` to `any` to handle properties not in the BugReport type ---
+  useEffect(() => {
+    const transformedBugs: BugFinding[] = bugReports.map((report: any) => ({
+      // Now TypeScript won't complain about these properties
+      id: report._id || report.id,
+      status: 'confirmed', 
+      isEditing: false, 
+      reproduction_steps: report.reproduction_steps || [],
+      title: report.title,
+      description: report.description,
+      roast: report.roast || '',
+    }));
+    setBugFindings(transformedBugs);
+  }, [bugReports]);
 
-  const getUser = (userId: string) => {
-    return mockUsers.find(u => u.id === userId);
-  };
 
   const handleSaveAsJira = (bugId: string) => {
     console.log('Save as Jira ticket:', bugId);
@@ -55,7 +56,6 @@ export default function ConfirmedBugsPage() {
     <div className="min-h-screen bg-background" data-confirmed-bugs-page>
       <Header />
       <div className="w-full">
-        {/* Page Header */}
         <div className="border-b border-border bg-background px-6 py-4">
           <div className="flex items-center space-x-4">
             <Button
@@ -81,9 +81,13 @@ export default function ConfirmedBugsPage() {
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="p-6 max-w-6xl mx-auto">
-          {bugFindings.length === 0 ? (
+          {bugsLoading ? (
+            <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                <p className="text-sm text-muted-foreground mt-4">Loading confirmed bugs...</p>
+            </div>
+          ) : bugFindings.length === 0 ? (
             <div className="text-center py-12">
               <Bug className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-foreground mb-2">
@@ -125,7 +129,6 @@ export default function ConfirmedBugsPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2 pt-0">
-                      {/* Roast Message first */}
                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 dark:bg-yellow-900/20 dark:border-yellow-800 roast-trigger" data-roast-id={bug.id}>
                         <div className="flex items-start space-x-2">
                           <Bug className="h-4 w-4 text-yellow-600 mt-0.5" />
@@ -140,11 +143,10 @@ export default function ConfirmedBugsPage() {
                         </div>
                       </div>
 
-                      {/* Reproduction Steps now below roast */}
                       <div>
                         <h4 className="font-medium mb-1 text-sm">Reproduction Steps:</h4>
                         <div className="space-y-4">
-                          {bug.reproduction_steps.map((step, stepIndex) => (
+                          {(bug.reproduction_steps || []).map((step, stepIndex) => (
                             <div key={stepIndex} className="flex items-start space-x-3 p-3 border rounded-lg bg-muted/30">
                               <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium">
                                 {step.step_number}
@@ -162,7 +164,6 @@ export default function ConfirmedBugsPage() {
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
                       <div className="flex items-center justify-between pt-3 border-t">
                         <div className="flex items-center space-x-3">
                           <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
