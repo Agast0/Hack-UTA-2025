@@ -1,29 +1,69 @@
 [
   {
     "fetch": [
-      "http://localhost:8000/api/user/auth0%7C123456789",
+      "http://localhost:8000/api/users",
+      "http://localhost:8000/api/user/auth0%7Cuser_alex_123",
+      "http://localhost:8000/api/user/auth0%7Cuser_casey_789",
+      "http://localhost:8000/api/teams",
+      "http://localhost:8000/api/teams?team_type=front-end",
+      "http://localhost:8000/api/teams?team_type=back-end",
       "http://localhost:8000/api/bugs",
       "http://localhost:8000/api/bugs?status=approved",
       "http://localhost:8000/api/bugs?status=not_approved",
-      "http://localhost:8000/api/bugs/68e1ca023b55eafc8553db21"
+      "http://localhost:8000/api/bugs?team_type=front-end",
+      "http://localhost:8000/api/bugs/PLACEHOLDER_BUG_ID"
     ]
   },
   {
     "post": [
       {
         "http://localhost:8000/api/create": {
-          "sub": "auth0|123456789",
-          "email": "test.user@example.com",
-          "name": "Test User",
-          "picture": "https://example.com/avatar.png"
+          "sub": "auth0|user_alex_123",
+          "email": "alex@example.com",
+          "name": "Alex Smith",
+          "picture": "https://example.com/alex.png"
+        }
+      },
+      {
+        "http://localhost:8000/api/teams": {
+          "name": "UI Wizards",
+          "team_type": "front-end",
+          "creator_auth0Id": "auth0|user_alex_123"
+        }
+      },
+      {
+        "http://localhost:8000/api/teams/PLACEHOLDER_TEAM_ID/join": {
+          "user_auth0Id": "auth0|user_casey_789"
         }
       },
       {
         "http://localhost:8000/api/bugs": {
-          "title": "Login button unresponsive",
-          "description": "The main login button on the homepage does not do anything when clicked."
+          "title": "Modal dialog is not centered",
+          "description": "The confirmation modal appears off-center on screens wider than 1440px.",
+          "creator_auth0Id": "auth0|user_alex_123"
+        }
+      },
+      {
+        "http://localhost:8000/api/bugs": {
+          "title": "API rate limit incorrect",
+          "description": "The /api/data endpoint is returning 429 errors before the documented rate limit is reached.",
+          "creator_auth0Id": "auth0|user_beth_456"
         }
       }
     ]
+  },
+  {
+    "put": [
+      {
+        "http://localhost:8000/api/bugs/PLACEHOLDER_BUG_ID": {
+          "title": "[High Priority] Modal dialog is not centered",
+          "description": "The confirmation modal appears off-center. This seems to be caused by a recent CSS update to the grid system.",
+          "is_approved": true
+        }
+      }
+    ]
+  },
+  {
+    "delete": ["http://localhost:8000/api/bugs/PLACEHOLDER_BUG_ID_TO_DELETE"]
   }
 ]
