@@ -90,13 +90,13 @@ export function MainContent() {
 
   if (!selectedTeamId) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
+      <div className="flex-1 flex items-center justify-center bg-black">
         <div className="text-center">
           <Bug className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-lg font-medium text-white mb-2">
             Select a Team
           </h3>
-          <p className="text-gray-500">
+          <p className="text-gray-400">
             Choose a team from the sidebar to start hunting bugs
           </p>
         </div>
@@ -105,15 +105,15 @@ export function MainContent() {
   }
 
   return (
-    <div className="flex-1 bg-gray-50 p-6">
+    <div className="flex-1 bg-black p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-white">
                 {selectedTeam?.name}
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-300">
                 {selectedTeam?.description || 'Team workspace'}
               </p>
             </div>

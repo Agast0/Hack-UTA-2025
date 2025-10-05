@@ -41,10 +41,10 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-80 bg-gray-50 border-r border-gray-200 h-full overflow-y-auto hidden lg:block">
+    <div className="w-80 bg-black border-r border-gray-800 h-full overflow-y-auto hidden lg:block">
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">Teams</h2>
+          <h2 className="text-lg font-semibold text-white">Teams</h2>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="h-8">
