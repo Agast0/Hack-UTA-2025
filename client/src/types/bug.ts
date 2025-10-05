@@ -29,6 +29,8 @@ export const AgentRunSchema = z.object({
   bugFindings: z.array(BugFindingSchema),
   createdAt: z.date(),
   completedAt: z.date().optional(),
+  createdByName: z.string().optional(),
+  createdByEmail: z.string().email().optional(),
 });
 
 export type AgentRun = z.infer<typeof AgentRunSchema>;

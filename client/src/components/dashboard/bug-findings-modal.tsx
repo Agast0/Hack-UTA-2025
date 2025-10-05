@@ -65,6 +65,12 @@ export function BugFindingsModal({ run }: BugFindingsModalProps) {
           <DialogDescription>
             Detailed analysis of security vulnerabilities found during the audit
           </DialogDescription>
+          {run.createdByName && (
+            <div className="text-xs text-muted-foreground">
+              Created by {run.createdByName}
+              {run.createdByEmail ? ` · ${run.createdByEmail}` : ''}
+            </div>
+          )}
         </DialogHeader>
 
         <div className="space-y-6">

@@ -19,31 +19,42 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { useTeamStore } from '@/lib/store';
-import { mockAgentRuns } from '@/lib/mock-data';
+import { useTeamStore, useRunsStore } from '@/lib/store';
 import { AgentRun } from '@/types/bug';
 import { columns } from './audit-columns';
 import { BugFindingsModal } from './bug-findings-modal';
+import { useAuth0 } from '@auth0/auth0-react';
 
 export function MainContent() {
   const { selectedTeamId, teams } = useTeamStore();
+  const { runs, addRun } = useRunsStore();
+  const { user } = useAuth0();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [targetUrl, setTargetUrl] = useState('');
   const [maxDepth, setMaxDepth] = useState(3);
   const [includeSubdomains, setIncludeSubdomains] = useState(false);
 
   const selectedTeam = teams.find(team => team.id === selectedTeamId);
-  const teamRuns = selectedTeamId
-    ? mockAgentRuns.filter((run) => run.teamId === selectedTeamId)
+  const teamRuns = selectedTeamId 
+    ? runs.filter((run) => run.teamId === selectedTeamId)
     : [];
 
   const handleCreateAudit = () => {
-    if (targetUrl.trim()) {
-      // In a real app, this would make an API call
-      console.log('Creating audit for:', targetUrl);
-      setTargetUrl('');
-      setIsCreateDialogOpen(false);
-    }
+    if (!selectedTeamId || !targetUrl.trim()) return;
+    const newRun: AgentRun = {
+      id: `run-${Date.now()}`,
+      teamId: selectedTeamId,
+      targetUrl: targetUrl.trim(),
+      settings: { maxDepth, includeSubdomains },
+      status: 'pending',
+      bugFindings: [],
+      createdAt: new Date(),
+      createdByName: user?.name,
+      createdByEmail: (user as any)?.email,
+    } as AgentRun;
+    addRun(newRun);
+    setTargetUrl('');
+    setIsCreateDialogOpen(false);
   };
 
   const getStatusIcon = (status: AgentRun['status']) => {

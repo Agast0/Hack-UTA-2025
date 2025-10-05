@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, Team } from '@/types/bug';
-import { mockUser, mockTeams } from './mock-data';
+import { User, Team, AgentRun } from '@/types/bug';
+import { mockUser, mockTeams, mockAgentRuns } from './mock-data';
 
 interface AuthState {
   user: User | null;
@@ -37,6 +37,26 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
     }
+  )
+);
+
+interface RunsState {
+  runs: AgentRun[];
+  addRun: (run: AgentRun) => void;
+  updateRun: (runId: string, patch: Partial<AgentRun>) => void;
+}
+
+export const useRunsStore = create<RunsState>()(
+  persist(
+    (set) => ({
+      runs: mockAgentRuns,
+      addRun: (run) => set((state) => ({ runs: [run, ...state.runs] })),
+      updateRun: (runId, patch) =>
+        set((state) => ({
+          runs: state.runs.map((r) => (r.id === runId ? { ...r, ...patch } : r)),
+        })),
+    }),
+    { name: 'runs-storage' }
   )
 );
 
