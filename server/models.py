@@ -1,6 +1,7 @@
 from __future__ import annotations
 from enum import Enum
 from typing import Optional, List
+from pydantic import BaseModel, Field
 from beanie import Document, PydanticObjectId, Link
 from pydantic import BaseModel, Field
 
@@ -63,9 +64,26 @@ class TeamJoin(BaseModel):
 
 
 # --- DB Models for Bug Reports ---
+class SeverityEnum(str, Enum):
+    CRITICAL = 'critical'
+    HIGH = 'high'
+    MEDIUM = 'medium'
+    LOW = 'low'
+
+
+class ReproductionStep(BaseModel):
+    step_number: int
+    text: str
+    image_url: str  # base64 data URL expected from agent
+
+
 class BugReport(Document):
     title: str
     description: str
+    roast: Optional[str] = None
+    severity: Optional[SeverityEnum] = None
+    reproduction_steps: List[ReproductionStep] = []
+    team_id: Optional[str] = None  # auth0 id provided by agent (aka tester/team id)
     is_approved: bool = False
     team: Link[Team]
 

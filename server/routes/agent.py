@@ -7,6 +7,7 @@ from typing import Optional, List, Any
 import os
 import logging
 from agentuity_agents.my_agent.agent import run
+from main import persist_agent_bug_reports
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -97,6 +98,12 @@ async def run_agent(request: AgentRequestModel):
         response_text = fastapi_response.get_response()
         if response_text is None:
             response_text = "Agent execution was skipped (debugging mode)"
+        # Persist agent-style bug reports if present (array)
+        try:
+            if isinstance(response_text, list) and response_text and isinstance(response_text[0], dict) and response_text[0].get('title'):
+                await persist_agent_bug_reports(response_text)
+        except Exception as e:
+            logger.error(f"Failed to persist agent bug reports: {e}")
         
         return AgentResponseModel(
             response=response_text,

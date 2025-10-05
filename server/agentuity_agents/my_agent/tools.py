@@ -940,6 +940,45 @@ def press_key(driver: webdriver.Chrome, key: str) -> dict:
             "error": f"Failed to extract page text: {str(e)}"
         }
 
+def open_link_in_current_tab(driver: webdriver.Chrome, url: str) -> dict:
+    """
+    Navigate to a specific URL in the current browser tab.
+    
+    Args:
+        driver: Chrome WebDriver instance
+        url: The URL to navigate to (must include http:// or https://)
+        
+    Returns:
+        dict: Result of the navigation operation
+    """
+    try:
+        # Validate URL format
+        if not url.startswith(('http://', 'https://')):
+            return {
+                "success": False,
+                "error": "URL must start with http:// or https://"
+            }
+        
+        # Navigate to the URL in the current tab
+        driver.get(url)
+        
+        # Wait a moment for the page to load
+        import time
+        time.sleep(2)
+        
+        return {
+            "success": True,
+            "message": f"Successfully navigated to {url}",
+            "current_url": driver.current_url,
+            "page_title": driver.title
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to navigate to {url}: {str(e)}"
+        }
+
 # Browser tools available to the agent
 BROWSER_TOOLS = {
     "click_element": {
@@ -1005,5 +1044,12 @@ BROWSER_TOOLS = {
         "name": "get_page_text",
         "description": "Extract all visible text from the current page",
         "parameters": {}
+    },
+    "open_link_in_current_tab": {
+        "name": "open_link_in_current_tab",
+        "description": "Navigate to a specific URL in the current browser tab",
+        "parameters": {
+            "url": {"type": "string", "required": True, "description": "The URL to navigate to (must include http:// or https://)"}
+        }
     }
 }

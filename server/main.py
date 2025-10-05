@@ -268,6 +268,37 @@ async def submit_bug_report(report_data: BugReportCreate):
     return new_report
 
 
+# Helper to persist agent-style bug reports
+async def persist_agent_bug_reports(agent_reports: list):
+    """Accepts a list of agent-style bug reports and stores them.
+    Expects objects with: title, description, roast, severity, reproduction_steps[], team_id (internal Team id).
+    """
+    for r in agent_reports or []:
+        # Resolve team by internal DB id (string ObjectId)
+        team_id_str = r.get('team_id')
+        if not team_id_str:
+            continue
+        try:
+            team_doc = await Team.get(PydanticObjectId(team_id_str))
+        except Exception:
+            team_doc = await Team.get(team_id_str)
+        if not team_doc:
+            continue
+
+        steps = r.get('reproduction_steps') or []
+        # Build document
+        doc = BugReport(
+            title=r.get('title', 'Untitled Bug'),
+            description=r.get('description', ''),
+            roast=r.get('roast'),
+            severity=r.get('severity'),
+            reproduction_steps=steps,
+            team_id=team_id_str,
+            team=team_doc,
+        )
+        await doc.insert()
+
+
 @app.get('/api/bugs', response_model=List[BugReport])
 async def get_bug_reports(
     status: Optional[str] = Query(

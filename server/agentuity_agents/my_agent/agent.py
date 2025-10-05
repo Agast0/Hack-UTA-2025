@@ -15,7 +15,7 @@ from agentuity_agents.my_agent.tools import (
     validate_url, setup_chrome_driver, navigate_to_url, discover_page_elements, 
     take_annotated_screenshot, remove_annotations, click_element, scroll_page, 
     extract_element_info, fill_input_field, select_dropdown_option, check_checkbox,
-    hover_element, press_key, BROWSER_TOOLS
+    hover_element, press_key, open_link_in_current_tab, BROWSER_TOOLS
 )
 
 # --- API and Client Initialization ---
@@ -30,6 +30,7 @@ AVAILABLE_TOOLS = {
     "click_element": click_element,
     "fill_input_field": fill_input_field,
     "scroll_page": scroll_page,
+    "open_link_in_current_tab": open_link_in_current_tab,
 }
 
 def convert_screenshots_to_base64(bug_report: dict) -> dict:
@@ -176,6 +177,21 @@ scroll_page_function = {
     }
 }
 
+open_link_in_current_tab_function = {
+    "name": "open_link_in_current_tab",
+    "description": "Navigate to a specific URL in the current browser tab. Use this for direct navigation to websites, especially when testing external links or specific pages.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "url": {
+                "type": "string",
+                "description": "The URL to navigate to (must include http:// or https://)"
+            }
+        },
+        "required": ["url"]
+    }
+}
+
 extract_element_info_function = {
     "name": "extract_element_info",
     "description": "Get detailed information about a discovered element",
@@ -277,6 +293,7 @@ press_key_function = {
 
 # Configure tools for Gemini API - Essential tools only
 tools = types.Tool(function_declarations=[
+    open_link_in_current_tab_function,
     click_element_function,
     fill_input_field_function,
     scroll_page_function
@@ -486,8 +503,13 @@ async def execute_test_cases(test_cases, browser_context, driver, initial_elemen
     for i, test_case in enumerate(test_cases_as_dicts, 1):
         context.logger.info(f"--- Running Test Case {i}/{len(test_cases_as_dicts)}: {test_case.get('what_to_test')} ---")
         
-        # Close the current driver and start fresh for each test case (skip first iteration)
-        if i > 1:
+        # For the first test case, use the existing browser setup
+        if i == 1:
+            fresh_driver = driver
+            fresh_initial_elements = initial_elements
+            fresh_initial_screenshot_path = initial_screenshot_path
+        else:
+            # Close the current driver and start fresh for subsequent test cases
             try:
                 driver.quit()
                 context.logger.info("Closed previous browser instance")
@@ -675,7 +697,7 @@ async def run_agent_loop(task_prompt: str, driver, initial_elements, initial_scr
                     context.logger.error("Model made a malformed function call - continuing with next turn")
                     action_log.append("Model made a malformed function call - continuing with next turn")
                     malformed_call_count += 1
-                    if malformed_call_count >= 3:
+                    if malformed_call_count >= 5:
                         context.logger.error("❌ Too many malformed function calls. Stopping agent loop.")
                         return "Agent stopped due to repeated malformed function calls", action_log
                     continue  # Skip this turn and continue with the next one

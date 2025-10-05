@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from routes.system import router as system_router
 from routes.health import router as health_router
 from routes.agent import router as agent_router
+from main import app as core_app
 
 # Load environment variables from .env file
 load_dotenv()
@@ -26,6 +27,10 @@ app = FastAPI(
 app.include_router(system_router)
 app.include_router(health_router)
 app.include_router(agent_router)
+
+# Merge routes from the main FastAPI app (users/teams/bugs endpoints)
+for route in core_app.router.routes:
+    app.router.routes.append(route)
 
 if __name__ == "__main__":
     import uvicorn
