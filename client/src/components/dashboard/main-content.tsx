@@ -356,7 +356,7 @@ export function MainContent() {
             </div>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="mlg-btn">
                   <Plus className="h-4 w-4 mr-2" />
                   New Agent Audit
                 </Button>

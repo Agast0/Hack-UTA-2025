@@ -103,7 +103,7 @@ export function Sidebar() {
             <DialogTrigger asChild>
               <Button
                 size="sm"
-                className="h-8 px-3 rounded-full transition-all duration-200 shadow-sm hover:-translate-y-1 hover:shadow-lg hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-primary/50"
+                className="mlg-btn h-8 px-3 rounded-full transition-all duration-200 shadow-sm hover:-translate-y-1 hover:shadow-lg"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Create Team

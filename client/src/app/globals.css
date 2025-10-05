@@ -132,7 +132,7 @@
   html[data-mlg='true'] .bg-card,
   html[data-mlg='true'] .bg-popover,
   html[data-mlg='true'] .bg-muted {
-    background-color: rgba(0,0,0,0.25) !important; /* reduced opacity */
+    background-color: rgba(0,0,0,0.5) !important; /* reduced opacity */
     backdrop-filter: saturate(120%) blur(2px);
   }
 
@@ -169,6 +169,44 @@
   }
   .bugzooka-font {
     font-family: "Comic Sans MS", "Comic Sans", cursive;
+  }
+
+  /* MLG-only: unify button tones with active theme */
+  html[data-mlg='true']:not(.dark) .mlg-btn {
+    background-color: #ffffff !important;
+    color: #0b1120 !important;
+    border-color: rgba(0,0,0,0.12) !important;
+  }
+  html[data-mlg='true']:not(.dark) .mlg-btn:hover {
+    background-color: #f7fafc !important;
+  }
+
+  html[data-mlg='true'].dark .mlg-btn {
+    background-color: #0f1115 !important;
+    color: #e5f2ff !important;
+    border-color: rgba(255,255,255,0.12) !important;
+  }
+  html[data-mlg='true'].dark .mlg-btn:hover {
+    background-color: #171a21 !important;
+  }
+  html[data-mlg='true']:not(.dark) [data-slot="button"] {
+    background-color: #ffffff !important;
+    color: #0b1120 !important;
+    border-color: rgba(0,0,0,0.12) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  html[data-mlg='true']:not(.dark) [data-slot="button"]:hover {
+    background-color: #f7fafc !important;
+  }
+
+  html[data-mlg='true'].dark [data-slot="button"] {
+    background-color: #0f1115 !important; /* black-like */
+    color: #e5f2ff !important;
+    border-color: rgba(255,255,255,0.12) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  html[data-mlg='true'].dark [data-slot="button"]:hover {
+    background-color: #171a21 !important;
   }
 }
 
