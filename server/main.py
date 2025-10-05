@@ -113,7 +113,7 @@ async def create_user(user_data: UserCreate):
     if existing_user:
         # Manually fetch the team if the link is not already a full document
         if existing_user.team and not isinstance(existing_user.team, Team):
-            existing_user.team = await Team.get(existing_user.team.id)
+            existing_user.team = await Team.get(existing_user.team.ref.id)
         return {'message': 'User already exists', 'user': existing_user}
 
     new_user = User(
@@ -132,7 +132,7 @@ async def get_user(auth0Id: str):
     user = await get_user_by_auth0_id(auth0Id)
     # Manual, safe link fetching
     if user.team and not isinstance(user.team, Team):
-        user.team = await Team.get(user.team.id)
+        user.team = await Team.get(user.team.ref.id)
     return user
 
 
@@ -144,7 +144,7 @@ async def get_users():
     for user in users:
         if user.team and not isinstance(user.team, Team):
             # Replace the Link object with the full Team document
-            user.team = await Team.get(user.team.id)
+            user.team = await Team.get(user.team.ref.id)
     return users
 
 
@@ -207,7 +207,7 @@ async def join_team(team_id: PydanticObjectId, join_data: TeamJoin):
     fetched_members = []
     for member_link in team_to_join.members:
         if not isinstance(member_link, User):
-            member = await User.get(member_link.id)
+            member = await User.get(member_link.ref.id)
             if member:
                 fetched_members.append(member)
     team_to_join.members = fetched_members
@@ -233,7 +233,7 @@ async def get_teams(
             fetched_members = []
             for member_link in team.members:
                 if not isinstance(member_link, User):
-                    member = await User.get(member_link.id)
+                    member = await User.get(member_link.ref.id)
                     if member:
                         fetched_members.append(member)
             team.members = fetched_members
@@ -252,7 +252,7 @@ async def submit_bug_report(report_data: BugReportCreate):
             detail='User must be on a team to create a bug report.',
         )
     # The creator.team is a Link, we need the actual document for the BugReport
-    team_doc = await Team.get(creator.team.id)
+    team_doc = await Team.get(creator.team.ref.id)
     if not team_doc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
