@@ -27,7 +27,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Header />
       <MobileTeamSelector />
       <div className="flex h-[calc(100vh-73px-60px)] lg:h-[calc(100vh-73px)]">

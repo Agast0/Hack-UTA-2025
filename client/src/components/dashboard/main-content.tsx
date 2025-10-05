@@ -90,13 +90,13 @@ export function MainContent() {
 
   if (!selectedTeamId) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
+      <div className="flex-1 flex items-center justify-center bg-background">
         <div className="text-center">
-          <Bug className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <Bug className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
             Select a Team
           </h3>
-          <p className="text-gray-500">
+          <p className="text-muted-foreground">
             Choose a team from the sidebar to start hunting bugs
           </p>
         </div>
@@ -105,15 +105,15 @@ export function MainContent() {
   }
 
   return (
-    <div className="flex-1 bg-gray-50 p-6">
+    <div className="flex-1 bg-background p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-foreground">
                 {selectedTeam?.name}
               </h1>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 {selectedTeam?.description || 'Team workspace'}
               </p>
             </div>
@@ -185,8 +185,8 @@ export function MainContent() {
                 <DataTable columns={auditColumns} data={teamRuns} />
               ) : (
                 <div className="text-center py-8">
-                  <Bug className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No audits yet. Create your first audit to get started!</p>
+                  <Bug className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No audits yet. Create your first audit to get started!</p>
                 </div>
               )}
             </CardContent>

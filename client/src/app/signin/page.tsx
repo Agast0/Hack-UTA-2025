@@ -38,7 +38,7 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
@@ -49,8 +49,8 @@ export default function SignInPage() {
               <Shield className="h-8 w-8 text-secondary-foreground" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">BugZooka</h1>
-          <p className="text-gray-600">Your AI-powered bug hunting companion</p>
+          <h1 className="text-4xl font-bold text-foreground mb-2">BugZooka</h1>
+          <p className="text-muted-foreground">Your AI-powered bug hunting companion</p>
         </div>
 
         <Card>
@@ -85,7 +85,7 @@ export default function SignInPage() {
                 />
               </div>
               {error && (
-                <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+                <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 p-3 rounded-md">
                   {error}
                 </div>
               )}
@@ -93,7 +93,7 @@ export default function SignInPage() {
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
-            <div className="mt-4 text-center text-sm text-gray-600">
+            <div className="mt-4 text-center text-sm text-muted-foreground">
               <p>Demo credentials: Use any email and password</p>
             </div>
           </CardContent>

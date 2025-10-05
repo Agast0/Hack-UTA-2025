@@ -12,12 +12,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuthStore } from '@/lib/store';
+import { ThemeMenu } from '@/components/layout/theme-menu';
 
 export function Header() {
   const { user, logout } = useAuthStore();
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <header className="bg-background border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
@@ -28,10 +29,11 @@ export function Header() {
               <Shield className="h-6 w-6 text-secondary-foreground" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">BugZooka</h1>
+          <h1 className="text-2xl font-bold text-foreground">BugZooka</h1>
         </div>
 
         <div className="flex items-center space-x-4">
+          <ThemeMenu />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
