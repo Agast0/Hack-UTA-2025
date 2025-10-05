@@ -166,6 +166,8 @@ export const mockAgentRuns: AgentRun[] = [
     bugFindings: mockBugFindings.slice(0, 2),
     createdAt: new Date('2024-03-01T09:00:00Z'),
     completedAt: new Date('2024-03-01T10:45:00Z'),
+    createdByName: mockUser.name,
+    createdByEmail: mockUser.email,
   },
   {
     id: 'run-2',
@@ -179,6 +181,8 @@ export const mockAgentRuns: AgentRun[] = [
     bugFindings: mockBugFindings.slice(2),
     createdAt: new Date('2024-03-02T14:00:00Z'),
     completedAt: new Date('2024-03-02T15:30:00Z'),
+    createdByName: 'Jane Member',
+    createdByEmail: 'jane.member@bugzooka.com',
   },
   {
     id: 'run-3',
@@ -191,5 +195,7 @@ export const mockAgentRuns: AgentRun[] = [
     status: 'running',
     bugFindings: [],
     createdAt: new Date('2024-03-03T08:00:00Z'),
+    createdByName: 'Sam Supervisor',
+    createdByEmail: 'sam.supervisor@bugzooka.com',
   },
 ];

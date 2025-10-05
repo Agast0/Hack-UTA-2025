@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, Team } from '@/types/bug';
-import { mockUser, mockTeams, mockUsers } from './mock-data';
+import { User, Team, AgentRun } from '@/types/bug';
+import { mockUser, mockTeams, mockUsers, mockAgentRuns } from './mock-data';
 
 interface AuthState {
   user: User | null;
@@ -19,6 +19,7 @@ interface TeamState {
   addUserToTeam: (teamId: string, user: User) => void;
   removeUserFromTeam: (teamId: string, userId: string) => void;
   getAvailableUsers: (teamId: string) => User[];
+  renameTeam: (teamId: string, name: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -41,6 +42,26 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
     }
+  )
+);
+
+interface RunsState {
+  runs: AgentRun[];
+  addRun: (run: AgentRun) => void;
+  updateRun: (runId: string, patch: Partial<AgentRun>) => void;
+}
+
+export const useRunsStore = create<RunsState>()(
+  persist(
+    (set) => ({
+      runs: mockAgentRuns,
+      addRun: (run) => set((state) => ({ runs: [run, ...state.runs] })),
+      updateRun: (runId, patch) =>
+        set((state) => ({
+          runs: state.runs.map((r) => (r.id === runId ? { ...r, ...patch } : r)),
+        })),
+    }),
+    { name: 'runs-storage' }
   )
 );
 
@@ -105,6 +126,13 @@ export const useTeamStore = create<TeamState>()(
         
         const teamMemberIds = (team.members || []).map(member => member.id);
         return mockUsers.filter(user => !teamMemberIds.includes(user.id));
+      },
+      renameTeam: (teamId: string, name: string) => {
+        set((state) => ({
+          teams: state.teams.map(team =>
+            team.id === teamId ? { ...team, name } : team
+          ),
+        }));
       },
     }),
     {

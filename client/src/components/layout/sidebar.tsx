@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Users, Shield, MoreHorizontal, Trash2, UserPlus, X } from 'lucide-react';
+import { Plus, Users, Shield, MoreHorizontal, Trash2, UserPlus, X, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,14 +29,16 @@ import { useTeamStore } from '@/lib/store';
 import { Team } from '@/types/bug';
 
 export function Sidebar() {
-  const { teams, selectedTeamId, setSelectedTeam, addTeam, deleteTeam, addUserToTeam, removeUserFromTeam, getAvailableUsers } = useTeamStore();
+  const { teams, selectedTeamId, setSelectedTeam, addTeam, deleteTeam, addUserToTeam, removeUserFromTeam, getAvailableUsers, renameTeam } = useTeamStore();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const [teamToAddUser, setTeamToAddUser] = useState<Team | null>(null);
+  const [teamToRename, setTeamToRename] = useState<Team | null>(null);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamDescription, setNewTeamDescription] = useState('');
+  const [renameValue, setRenameValue] = useState('');
 
   const handleCreateTeam = () => {
     if (newTeamName.trim()) {
@@ -82,6 +84,14 @@ export function Sidebar() {
     removeUserFromTeam(teamId, userId);
   };
 
+  const confirmRenameTeam = () => {
+    if (teamToRename && renameValue.trim()) {
+      renameTeam(teamToRename.id, renameValue.trim());
+      setTeamToRename(null);
+      setRenameValue('');
+    }
+  };
+
   return (
     <div className="w-80 bg-background border-r border-border h-full overflow-y-auto hidden lg:block">
       <div className="p-6">
@@ -89,7 +99,10 @@ export function Sidebar() {
           <h2 className="text-lg font-semibold text-foreground">Teams</h2>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="h-8">
+              <Button
+                size="sm"
+                className="h-8 px-3 rounded-full transition-all duration-200 shadow-sm hover:-translate-y-1 hover:shadow-lg hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-primary/50"
+              >
                 <Plus className="h-4 w-4 mr-1" />
                 Create Team
               </Button>
@@ -134,23 +147,23 @@ export function Sidebar() {
           </Dialog>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-1.5">
           {teams.map((team) => (
             <Card
               key={team.id}
-              className={`transition-all hover:shadow-md ${
+              onClick={() => setSelectedTeam(team.id)}
+              className={`group transition-all hover:shadow-md py-2 gap-1 cursor-pointer ${
                 selectedTeamId === team.id
                   ? 'ring-2 ring-primary bg-primary/5'
                   : 'hover:bg-accent'
               }`}
             >
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-1 px-3 gap-0.5">
                 <div className="flex items-center justify-between">
                   <div 
-                    className="flex items-center space-x-2 cursor-pointer flex-1"
-                    onClick={() => setSelectedTeam(team.id)}
+                    className="flex items-center space-x-1.5 flex-1"
                   >
-                    <div className="bg-primary/10 rounded-lg p-2">
+                    <div className="bg-primary/10 rounded-lg p-1">
                       <Users className="h-4 w-4 text-primary" />
                     </div>
                     <CardTitle className="text-sm font-medium">
@@ -158,7 +171,7 @@ export function Sidebar() {
                     </CardTitle>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">
                       {team.memberCount} members
                     </Badge>
                     <DropdownMenu>
@@ -166,25 +179,26 @@ export function Sidebar() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0"
+                          className="h-7 w-7 p-0 rounded-full transition-colors duration-150 hover:bg-primary/30 hover:text-primary-foreground dark:hover:bg-primary/35 focus-visible:ring-2 focus-visible:ring-primary/40"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddUser(team);
-                          }}
-                        >
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          Add User
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTeamToRename(team);
+                          setRenameValue(team.name);
+                        }}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        <span>Rename Team</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
                             handleDeleteTeam(team);
                           }}
                           className="text-destructive focus:text-destructive"
@@ -198,48 +212,44 @@ export function Sidebar() {
                 </div>
               </CardHeader>
               <CardContent 
-                className="pt-0 cursor-pointer"
-                onClick={() => setSelectedTeam(team.id)}
+                className="pt-0 px-3 py-0.5"
               >
-                {team.description && (
-                  <p className="text-xs text-muted-foreground mb-3">{team.description}</p>
-                )}
-                
+                {/* Description removed for a slimmer card */}
+
                 {/* Team Members */}
-                <div className="space-y-2">
+                <div className="space-y-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">Members</span>
+                    <span className="text-xs leading-none font-medium text-muted-foreground">Members</span>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 px-2 text-xs"
+                      className="h-7 w-7 p-0 rounded-full transition-colors duration-150 hover:bg-emerald-500 hover:text-white dark:hover:bg-emerald-400 focus-visible:ring-2 focus-visible:ring-emerald-400/60 focus-visible:outline-none"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleAddUser(team);
                       }}
                     >
-                      <UserPlus className="h-3 w-3 mr-1" />
-                      Add
+                      <UserPlus className="h-3 w-3" />
                     </Button>
                   </div>
                   
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-0.5">
                     {(team.members || []).map((member) => (
                       <div
                         key={member.id}
-                        className="flex items-center space-x-1 bg-muted rounded-full px-2 py-1 text-xs"
+                        className="flex items-center space-x-1 bg-muted rounded-full px-1.5 py-0.5 text-[10px]"
                       >
-                        <Avatar className="h-4 w-4">
+                        <Avatar className="h-3 w-3">
                           <AvatarImage src={member.avatar} alt={member.name} />
-                          <AvatarFallback className="text-xs">
+                          <AvatarFallback className="text-[10px]">
                             {member.name.split(' ').map(n => n[0]).join('')}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-xs">{member.name}</span>
+                        <span className="text-[10px]">{member.name}</span>
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                          className="h-5 w-5 p-0 rounded-full transition-colors duration-150 hover:bg-destructive/25 hover:text-destructive focus-visible:ring-2 focus-visible:ring-destructive/40 focus-visible:outline-none"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleRemoveUser(team.id, member.id);
@@ -342,6 +352,49 @@ export function Sidebar() {
               onClick={() => setIsAddUserDialogOpen(false)}
             >
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Team Dialog */}
+      <Dialog open={!!teamToRename} onOpenChange={(open) => {
+        if (!open) {
+          setTeamToRename(null);
+          setRenameValue('');
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Rename Team</DialogTitle>
+            <DialogDescription>
+              Update the name for "{teamToRename?.name || ''}".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="rename-team">New Team Name</Label>
+            <Input
+              id="rename-team"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              placeholder="Enter new team name"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTeamToRename(null);
+                setRenameValue('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRenameTeam}
+              disabled={!renameValue.trim()}
+            >
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -13,6 +13,14 @@ export const columns: ColumnDef<AgentRun>[] = [
     ),
   },
   {
+    accessorKey: 'createdByName',
+    header: 'Created By',
+    cell: ({ row }) => {
+      const name = row.getValue('createdByName') as string | undefined;
+      return <div>{name || '—'}</div>;
+    },
+  },
+  {
     accessorKey: 'createdAt',
     header: 'Created',
     cell: ({ row }) => {
