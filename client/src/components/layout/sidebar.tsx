@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Users, Shield, AlertCircle } from 'lucide-react';
+import { Plus, Users, Shield, AlertCircle, MoreHorizontal, Trash2, UserPlus, X, Pencil, Bug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,21 +15,35 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useTeamStore, useAuthStore } from '@/lib/store';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Team } from '@/types/bug';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useRouter } from 'next/navigation';
 
 export function Sidebar() {
-  const { teams, selectedTeamId, setSelectedTeam, fetchTeams, createTeam, isLoading, error } = useTeamStore();
+  const router = useRouter();
+  const { teams, selectedTeamId, setSelectedTeam, deleteTeam, addUserToTeam, removeUserFromTeam, getAvailableUsers, renameTeam, fetchTeams, createTeam, isLoading, error } = useTeamStore();
   const { user, syncUser } = useAuthStore();
   const { user: auth0User, isAuthenticated } = useAuth0();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
+  const [teamToAddUser, setTeamToAddUser] = useState<Team | null>(null);
+  const [teamToRename, setTeamToRename] = useState<Team | null>(null);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamType, setNewTeamType] = useState<'front-end' | 'back-end'>('front-end');
   const [isCreating, setIsCreating] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
 
   // Sync user with backend when Auth0 user is available
   useEffect(() => {
@@ -69,6 +83,44 @@ export function Sidebar() {
     }
   };
 
+  const handleDeleteTeam = (team: Team) => {
+    setTeamToDelete(team);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteTeam = () => {
+    if (teamToDelete) {
+      deleteTeam(teamToDelete.id);
+      setTeamToDelete(null);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  const handleAddUser = (team: Team) => {
+    setTeamToAddUser(team);
+    setIsAddUserDialogOpen(true);
+  };
+
+  const handleAddUserToTeam = (user: any) => {
+    if (teamToAddUser) {
+      addUserToTeam(teamToAddUser.id, user);
+      setTeamToAddUser(null);
+      setIsAddUserDialogOpen(false);
+    }
+  };
+
+  const handleRemoveUser = (teamId: string, userId: string) => {
+    removeUserFromTeam(teamId, userId);
+  };
+
+  const confirmRenameTeam = () => {
+    if (teamToRename && renameValue.trim()) {
+      renameTeam(teamToRename.id, renameValue.trim());
+      setTeamToRename(null);
+      setRenameValue('');
+    }
+  };
+
   return (
     <div className="w-80 bg-background border-r border-border h-full overflow-y-auto hidden lg:block">
       <div className="p-6">
@@ -76,7 +128,10 @@ export function Sidebar() {
           <h2 className="text-lg font-semibold text-foreground">Teams</h2>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="h-8">
+              <Button
+                size="sm"
+                className="h-8 px-3 rounded-full transition-all duration-200 shadow-sm hover:-translate-y-1 hover:shadow-lg hover:bg-primary hover:text-primary-foreground focus-visible:ring-2 focus-visible:ring-primary/50"
+              >
                 <Plus className="h-4 w-4 mr-1" />
                 Create Team
               </Button>
@@ -157,7 +212,7 @@ export function Sidebar() {
                       </CardTitle>
                     </div>
                     <Badge variant="secondary" className="text-xs">
-                      {team.members?.length || 0} members
+                      {(team.members || []).length} members
                     </Badge>
                   </div>
                 </CardHeader>
@@ -182,6 +237,170 @@ export function Sidebar() {
           </div>
         )}
       </div>
+
+      {/* Confirmed Bugs Section */}
+      <div className="p-6 border-t border-border">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-foreground">Confirmed Bugs</h2>
+          <Badge variant="secondary" className="text-xs">
+            0 bugs
+          </Badge>
+        </div>
+        
+        <div className="space-y-1.5">
+          <Card
+            onClick={() => {
+              router.push('/confirmed-bugs');
+            }}
+            className="group transition-all hover:shadow-md py-2 gap-1 cursor-pointer hover:bg-accent"
+          >
+            <CardHeader className="pb-1 px-3 gap-0.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5 flex-1">
+                  <div className="bg-primary/10 rounded-lg p-1">
+                    <Bug className="h-4 w-4 text-primary" />
+                  </div>
+                  <CardTitle className="text-sm font-medium">
+                    All Confirmed Bugs
+                  </CardTitle>
+                </div>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5">
+                  0 bugs
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0 px-3 py-0.5">
+              <p className="text-xs text-muted-foreground">
+                View and manage all confirmed bug reports
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Team</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete "{teamToDelete?.name}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteTeam}
+            >
+              Delete Team
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add User Dialog */}
+      <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add User to Team</DialogTitle>
+            <DialogDescription>
+              Select a user to add to "{teamToAddUser?.name}".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-60 overflow-y-auto">
+            <div className="space-y-2">
+              {teamToAddUser && getAvailableUsers(teamToAddUser.id).length > 0 ? (
+                getAvailableUsers(teamToAddUser.id).map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-accent cursor-pointer"
+                    onClick={() => handleAddUserToTeam(user)}
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.picture} alt={user.name} />
+                      <AvatarFallback>
+                        {(user.name || user.email).split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{user.name || user.email}</p>
+                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+                    <Button size="sm" variant="outline">
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-sm text-muted-foreground">
+                    No available users to add to this team.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddUserDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Team Dialog */}
+      <Dialog open={!!teamToRename} onOpenChange={(open) => {
+        if (!open) {
+          setTeamToRename(null);
+          setRenameValue('');
+        }
+      }}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Rename Team</DialogTitle>
+            <DialogDescription>
+              Update the name for "{teamToRename?.name || ''}".
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="rename-team">New Team Name</Label>
+            <Input
+              id="rename-team"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              placeholder="Enter new team name"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTeamToRename(null);
+                setRenameValue('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRenameTeam}
+              disabled={!renameValue.trim()}
+            >
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

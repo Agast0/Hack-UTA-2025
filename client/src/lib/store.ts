@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { User, Team } from '@/types/bug';
+import { User, Team, AgentRun } from '@/types/bug';
 import { userApi, teamApi, ApiError } from './api';
 
 interface AuthState {
@@ -22,6 +22,11 @@ interface TeamState {
   fetchTeams: () => Promise<void>;
   createTeam: (teamData: { name: string; team_type: 'front-end' | 'back-end'; creator_auth0Id: string }) => Promise<void>;
   joinTeam: (teamId: string, userAuth0Id: string) => Promise<void>;
+  deleteTeam: (teamId: string) => void;
+  addUserToTeam: (teamId: string, user: User) => void;
+  removeUserFromTeam: (teamId: string, userId: string) => void;
+  getAvailableUsers: (teamId: string) => User[];
+  renameTeam: (teamId: string, name: string) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -71,6 +76,26 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
     }
+  )
+);
+
+interface RunsState {
+  runs: AgentRun[];
+  addRun: (run: AgentRun) => void;
+  updateRun: (runId: string, patch: Partial<AgentRun>) => void;
+}
+
+export const useRunsStore = create<RunsState>()(
+  persist(
+    (set) => ({
+      runs: [],
+      addRun: (run) => set((state) => ({ runs: [run, ...state.runs] })),
+      updateRun: (runId, patch) =>
+        set((state) => ({
+          runs: state.runs.map((r) => (r.id === runId ? { ...r, ...patch } : r)),
+        })),
+    }),
+    { name: 'runs-storage' }
   )
 );
 
@@ -127,6 +152,51 @@ export const useTeamStore = create<TeamState>()(
           set({ error: errorMessage, isLoading: false });
           throw error;
         }
+      },
+      deleteTeam: (teamId: string) => {
+        set((state) => {
+          const newTeams = state.teams.filter(team => team.id !== teamId);
+          const newSelectedTeamId = state.selectedTeamId === teamId ? null : state.selectedTeamId;
+          return {
+            teams: newTeams,
+            selectedTeamId: newSelectedTeamId,
+          };
+        });
+      },
+      addUserToTeam: (teamId: string, user: User) => {
+        set((state) => ({
+          teams: state.teams.map(team => 
+            team.id === teamId 
+              ? {
+                  ...team,
+                  members: [...(team.members || []), user],
+                }
+              : team
+          ),
+        }));
+      },
+      removeUserFromTeam: (teamId: string, userId: string) => {
+        set((state) => ({
+          teams: state.teams.map(team => 
+            team.id === teamId 
+              ? {
+                  ...team,
+                  members: (team.members || []).filter(member => member.id !== userId),
+                }
+              : team
+          ),
+        }));
+      },
+      getAvailableUsers: (_teamId: string) => {
+        // Backend-driven app: populate from API when available. For now return empty.
+        return [];
+      },
+      renameTeam: (teamId: string, name: string) => {
+        set((state) => ({
+          teams: state.teams.map(team =>
+            team.id === teamId ? { ...team, name } : team
+          ),
+        }));
       },
     }),
     {

@@ -7,11 +7,14 @@ export const BugFindingSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
-  stepsToReproduce: z.array(z.string()),
-  severity: SeverityLevel,
-  roastMessage: z.string(),
-  screenshotUrls: z.array(z.string()),
-  createdAt: z.date(),
+  roast: z.string(),
+  reproduction_steps: z.array(z.object({
+    step_number: z.number(),
+    text: z.string(),
+    image_url: z.string(),
+  })),
+  status: z.enum(['pending', 'confirmed', 'rejected']).default('pending'),
+  isEditing: z.boolean().optional().default(false),
 });
 
 export type BugFinding = z.infer<typeof BugFindingSchema>;
@@ -20,8 +23,8 @@ export const AgentRunSchema = z.object({
   id: z.string(),
   teamId: z.string(),
   targetUrl: z.string(),
+  createdBy: z.string(), // User ID who created/started the audit
   settings: z.object({
-    maxDepth: z.number().default(3),
     includeSubdomains: z.boolean().default(false),
     customHeaders: z.record(z.string(), z.string()).optional(),
   }),
@@ -29,11 +32,12 @@ export const AgentRunSchema = z.object({
   bugFindings: z.array(BugFindingSchema),
   createdAt: z.date(),
   completedAt: z.date().optional(),
+  createdByName: z.string().optional(),
+  createdByEmail: z.string().email().optional(),
 });
 
 export type AgentRun = z.infer<typeof AgentRunSchema>;
 
-// Updated Team type to match backend API
 export const TeamSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -48,8 +52,6 @@ export const TeamSchema = z.object({
 });
 
 export type Team = z.infer<typeof TeamSchema>;
-
-// Updated User type to match backend API
 export const UserSchema = z.object({
   id: z.string(),
   auth0Id: z.string(),
@@ -65,7 +67,6 @@ export const UserSchema = z.object({
 
 export type User = z.infer<typeof UserSchema>;
 
-// Bug Report type to match backend API
 export const BugReportSchema = z.object({
   id: z.string(),
   title: z.string(),

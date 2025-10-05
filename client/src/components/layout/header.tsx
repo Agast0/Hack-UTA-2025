@@ -1,6 +1,7 @@
 'use client';
 
-import { Bug, Shield, User, LogOut } from 'lucide-react';
+import { User, LogOut } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -22,12 +23,13 @@ export function Header() {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
-            <div className="bg-primary rounded-lg p-2">
-              <Bug className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <div className="bg-secondary rounded-lg p-2">
-              <Shield className="h-6 w-6 text-secondary-foreground" />
-            </div>
+            <Image
+              src="/logo.png"
+              alt="BugZooka Logo"
+              width={60}
+              height={60}
+              className="rounded-lg"
+            />
           </div>
           <h1 className="text-2xl font-bold text-foreground">BugZooka</h1>
         </div>

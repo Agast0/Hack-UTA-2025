@@ -2,7 +2,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AgentRun } from '@/types/bug';
-import { BugFindingsModal } from './bug-findings-modal';
+import { BugFindingsCollapsible } from './bug-findings-collapsible';
 
 export const columns: ColumnDef<AgentRun>[] = [
   {
@@ -13,11 +13,11 @@ export const columns: ColumnDef<AgentRun>[] = [
     ),
   },
   {
-    accessorKey: 'createdAt',
-    header: 'Created',
+    accessorKey: 'createdByName',
+    header: 'Created By',
     cell: ({ row }) => {
-      const date = new Date(row.getValue('createdAt'));
-      return <div>{date.toLocaleDateString()}</div>;
+      const name = row.getValue('createdByName') as string | undefined;
+      return <div>{name || '—'}</div>;
     },
   },
   {
@@ -37,7 +37,7 @@ export const columns: ColumnDef<AgentRun>[] = [
     header: 'Actions',
     cell: ({ row }) => {
       const run = row.original;
-      return <BugFindingsModal run={run} />;
+      return <BugFindingsCollapsible run={run} />;
     },
   },
 ];
