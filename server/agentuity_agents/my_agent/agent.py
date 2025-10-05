@@ -305,7 +305,6 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                 context.logger.error(f"Error closing driver: {e}")
 
 async def execute_bug_hunting(browser_context, driver, initial_elements, initial_screenshot_path, context, response):
-    # (This function is correct and remains unchanged)
     final_text_result, action_log = await run_agent_loop(
         task_prompt=BUG_HUNTING_PROMPT,
         driver=driver,
@@ -314,12 +313,34 @@ async def execute_bug_hunting(browser_context, driver, initial_elements, initial
         context=context
     )
     
-    final_response = f"### Bug Hunt Summary\n\n**Agent's Final Analysis:**\n{final_text_result}\n\n"
-    final_response += "---\n### Steps Taken\n"
-    for i, log in enumerate(action_log, 1):
-        final_response += f"{i}. {log}\n"
-        
-    return response.text(final_response)
+    # Try to parse the response as JSON bug reports
+    try:
+        # Clean the response to extract JSON
+        import re
+        json_match = re.search(r'\[.*\]', final_text_result, re.DOTALL)
+        if json_match:
+            import json
+            bug_reports = json.loads(json_match.group())
+            
+            # Convert screenshot paths to base64
+            for report in bug_reports:
+                for step in report.get('reproduction_steps', []):
+                    if 'image_url' in step and step['image_url'].endswith('.png'):
+                        try:
+                            with open(step['image_url'], 'rb') as img_file:
+                                img_data = img_file.read()
+                                step['image_url'] = base64.b64encode(img_data).decode('utf-8')
+                        except:
+                            step['image_url'] = ""
+            
+            return response.json(bug_reports)
+        else:
+            # No JSON found, return empty array for successful testing
+            return response.json([])
+    except Exception as e:
+        context.logger.error(f"Error parsing bug reports: {e}")
+        # Fallback to text response
+        return response.text(f"Error parsing bug reports: {str(e)}\n\nRaw response: {final_text_result}")
 
 async def execute_test_cases(test_cases, browser_context, driver, initial_elements, initial_screenshot_path, context, response):
     all_results = []
