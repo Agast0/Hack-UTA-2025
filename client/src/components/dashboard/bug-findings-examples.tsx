@@ -85,7 +85,6 @@ export function BugFindingsExamples({ run }: BugFindingsExamplesProps) {
               <div>
                 <h5 className="font-medium">{run.targetUrl}</h5>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(run.createdAt).toLocaleDateString()}
                 </p>
               </div>
               <div className="flex items-center space-x-2">

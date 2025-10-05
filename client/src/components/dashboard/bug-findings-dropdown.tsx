@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Bug, ExternalLink, Calendar, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Bug, ExternalLink, AlertTriangle, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,30 +29,6 @@ export function BugFindingsDropdown({
 }: BugFindingsDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const getSeverityColor = (severity: BugFinding['severity']) => {
-    switch (severity) {
-      case 'critical':
-        return 'destructive';
-      case 'high':
-        return 'destructive';
-      case 'medium':
-        return 'default';
-      case 'low':
-        return 'secondary';
-      default:
-        return 'outline';
-    }
-  };
-
-  const getSeverityIcon = (severity: BugFinding['severity']) => {
-    switch (severity) {
-      case 'critical':
-      case 'high':
-        return <AlertTriangle className="h-4 w-4" />;
-      default:
-        return <Bug className="h-4 w-4" />;
-    }
-  };
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -96,13 +72,6 @@ export function BugFindingsDropdown({
                           {finding.description}
                         </p>
                       </div>
-                      <Badge
-                        variant={getSeverityColor(finding.severity)}
-                        className="ml-4 flex items-center space-x-1"
-                      >
-                        {getSeverityIcon(finding.severity)}
-                        <span className="capitalize">{finding.severity}</span>
-                      </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -156,12 +125,6 @@ export function BugFindingsDropdown({
                       </div>
                     )}
 
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        Found on {new Date(finding.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
 
                     {index < run.bugFindings.length - 1 && (
                       <Separator className="my-4" />

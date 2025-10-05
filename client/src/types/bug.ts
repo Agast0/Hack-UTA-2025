@@ -8,15 +8,9 @@ export const BugFindingSchema = z.object({
   title: z.string(),
   description: z.string(),
   stepsToReproduce: z.array(z.string()),
-  severity: SeverityLevel,
   roastMessage: z.string(),
   screenshotUrls: z.array(z.string()),
-  createdAt: z.date(),
   status: z.enum(['pending', 'confirmed', 'rejected']).default('pending'),
-  confirmedBy: z.string().optional(),
-  rejectedBy: z.string().optional(),
-  confirmedAt: z.date().optional(),
-  rejectedAt: z.date().optional(),
 });
 
 export type BugFinding = z.infer<typeof BugFindingSchema>;

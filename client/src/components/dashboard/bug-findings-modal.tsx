@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bug, ExternalLink, Calendar, AlertTriangle } from "lucide-react";
+import { Bug, ExternalLink, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -137,10 +137,6 @@ export function BugFindingsModal({ run }: BugFindingsModalProps) {
                     </div>
                   )}
 
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>Found on {new Date(finding.createdAt).toLocaleDateString()}</span>
-                  </div>
 
                   {index < run.bugFindings.length - 1 && <Separator className="my-4" />}
                 </CardContent>

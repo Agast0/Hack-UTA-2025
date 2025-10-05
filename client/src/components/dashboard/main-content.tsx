@@ -93,9 +93,6 @@ function RunningAuditCard({ run, testCases }: { run: AgentRun; testCases?: Array
             <Clock className="h-6 w-6 text-blue-600 animate-spin" />
             <div className="flex-1">
               <h3 className="font-semibold text-lg text-foreground">{run.targetUrl}</h3>
-              <p className="text-sm text-muted-foreground">
-                Started {new Date(run.createdAt).toLocaleString()}
-              </p>
               {run.createdBy && (
                 <div className="flex items-center space-x-2 mt-1">
                   <span className="text-xs text-muted-foreground">Created by:</span>
@@ -469,32 +466,6 @@ export function MainContent() {
         </div>
 
         <div className="space-y-6">
-          {/* Quick Bug Findings Access */}
-          {teamRuns.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Bug Findings Access</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {teamRuns.slice(0, 3).map((run) => (
-                    <div key={run.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-sm truncate">{run.targetUrl}</h4>
-                        <Badge variant="secondary" className="text-xs">
-                          {run.bugFindings.length} bugs
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(run.createdAt).toLocaleDateString()}
-                      </p>
-                      <BugFindingsModal run={run} />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Running Audits Section */}
           <Card>

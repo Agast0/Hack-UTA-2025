@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Bug, ExternalLink, Calendar, AlertTriangle, ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react';
+import { Bug, ExternalLink, ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,11 +33,7 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
         bug.id === bugId 
           ? { 
               ...bug, 
-              status: 'confirmed' as const,
-              confirmedBy: 'current-user', // In real app, this would be the actual user ID
-              confirmedAt: new Date(),
-              rejectedBy: undefined,
-              rejectedAt: undefined
+              status: 'confirmed' as const
             }
           : bug
       )
@@ -50,11 +46,7 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
         bug.id === bugId 
           ? { 
               ...bug, 
-              status: 'rejected' as const,
-              rejectedBy: 'current-user', // In real app, this would be the actual user ID
-              rejectedAt: new Date(),
-              confirmedBy: undefined,
-              confirmedAt: undefined
+              status: 'rejected' as const
             }
           : bug
       )
@@ -67,39 +59,11 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
         bug.id === bugId 
           ? { 
               ...bug, 
-              status: 'pending' as const,
-              confirmedBy: undefined,
-              confirmedAt: undefined,
-              rejectedBy: undefined,
-              rejectedAt: undefined
+              status: 'pending' as const
             }
           : bug
       )
     );
-  };
-  const getSeverityColor = (severity: BugFinding['severity']) => {
-    switch (severity) {
-      case 'critical':
-        return 'destructive';
-      case 'high':
-        return 'destructive';
-      case 'medium':
-        return 'default';
-      case 'low':
-        return 'secondary';
-      default:
-        return 'outline';
-    }
-  };
-
-  const getSeverityIcon = (severity: BugFinding['severity']) => {
-    switch (severity) {
-      case 'critical':
-      case 'high':
-        return <AlertTriangle className="h-4 w-4" />;
-      default:
-        return <Bug className="h-4 w-4" />;
-    }
   };
 
   return (
@@ -151,13 +115,6 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
                       )}
                     </div>
                   </div>
-                  <Badge
-                    variant={getSeverityColor(finding.severity)}
-                    className="ml-3 flex items-center space-x-1 text-sm"
-                  >
-                    {getSeverityIcon(finding.severity)}
-                    <span className="capitalize">{finding.severity}</span>
-                  </Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 pt-0">
@@ -172,7 +129,7 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
 
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 dark:bg-yellow-900/20 dark:border-yellow-800">
                   <div className="flex items-start space-x-2">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                    <Bug className="h-4 w-4 text-yellow-600 mt-0.5" />
                     <div>
                       <h4 className="font-medium text-yellow-800 mb-1 dark:text-yellow-300 text-sm">
                         Roast Message
@@ -250,12 +207,6 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
                 </div>
 
 
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  <span>
-                    Found on {new Date(finding.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
 
                 {index < bugFindings.length - 1 && (
                   <Separator className="my-2" />

@@ -105,7 +105,6 @@ export function AuditTable({
                     <div className="flex-1 min-w-0">
                       <h3 className="font-medium truncate text-base">{run.targetUrl}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(run.createdAt).toLocaleDateString()}
                       </p>
                       {run.createdBy && (
                         <p className="text-xs text-muted-foreground">

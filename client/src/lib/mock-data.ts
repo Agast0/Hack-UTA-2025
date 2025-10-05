@@ -85,13 +85,11 @@ export const mockBugFindings: BugFinding[] = [
       'Enter any password',
       'Click login',
     ],
-    severity: 'critical',
     roastMessage: getRoastMessage('critical'),
     screenshotUrls: [
       'https://via.placeholder.com/400x300/ff0000/ffffff?text=SQL+Injection',
       'https://via.placeholder.com/400x300/ff0000/ffffff?text=Database+Access',
     ],
-    createdAt: new Date('2024-03-01T10:30:00Z'),
     status: 'pending',
   },
   {
@@ -104,12 +102,10 @@ export const mockBugFindings: BugFinding[] = [
       'Click search',
       'Observe the alert popup',
     ],
-    severity: 'high',
     roastMessage: getRoastMessage('high'),
     screenshotUrls: [
       'https://via.placeholder.com/400x300/ff8800/ffffff?text=XSS+Alert',
     ],
-    createdAt: new Date('2024-03-01T11:15:00Z'),
     status: 'pending',
   },
   {
@@ -122,12 +118,10 @@ export const mockBugFindings: BugFinding[] = [
       'Inspect the form elements',
       'Notice the absence of CSRF tokens',
     ],
-    severity: 'medium',
     roastMessage: getRoastMessage('medium'),
     screenshotUrls: [
       'https://via.placeholder.com/400x300/ffff00/000000?text=No+CSRF+Token',
     ],
-    createdAt: new Date('2024-03-01T12:00:00Z'),
     status: 'pending',
   },
   {
@@ -140,12 +134,10 @@ export const mockBugFindings: BugFinding[] = [
       'Submit the form',
       'Notice the weak password is accepted',
     ],
-    severity: 'low',
     roastMessage: getRoastMessage('low'),
     screenshotUrls: [
       'https://via.placeholder.com/400x300/00ff00/000000?text=Weak+Password',
     ],
-    createdAt: new Date('2024-03-01T12:30:00Z'),
     status: 'pending',
   },
 ];

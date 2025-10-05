@@ -21,14 +21,6 @@ export const columns: ColumnDef<AgentRun>[] = [
     },
   },
   {
-    accessorKey: 'createdAt',
-    header: 'Created',
-    cell: ({ row }) => {
-      const date = new Date(row.getValue('createdAt'));
-      return <div>{date.toLocaleDateString()}</div>;
-    },
-  },
-  {
     accessorKey: 'bugFindings',
     header: 'Bug Findings',
     cell: ({ row }) => {
