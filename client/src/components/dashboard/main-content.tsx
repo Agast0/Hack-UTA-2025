@@ -22,12 +22,8 @@ import { Switch } from '@/components/ui/switch';
 import { useTeamStore, useRunsStore } from '@/lib/store';
 import { AgentRun } from '@/types/bug';
 import { columns } from './audit-columns';
-<<<<<<< HEAD
 import { BugFindingsModal } from './bug-findings-modal';
 import { useAuth0 } from '@auth0/auth0-react';
-=======
-import { BugFindingsDropdown } from './bug-findings-dropdown';
->>>>>>> ad836ec3ef97204abe45122d1d2128562e94a3ee
 
 export function MainContent() {
   const { selectedTeamId, teams } = useTeamStore();
@@ -200,24 +196,17 @@ export function MainContent() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {teamRuns.slice(0, 3).map((run) => (
-                    <div key={run.id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
+                    <div key={run.id} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
                         <h4 className="font-medium text-sm truncate">{run.targetUrl}</h4>
                         <Badge variant="secondary" className="text-xs">
                           {run.bugFindings.length} bugs
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-3">
+                      <p className="text-xs text-muted-foreground">
                         {new Date(run.createdAt).toLocaleDateString()}
                       </p>
-                      <BugFindingsDropdown 
-                        run={run}
-                        trigger={
-                          <Button variant="outline" size="sm" className="w-full">
-                            View Bug Findings
-                          </Button>
-                        }
-                      />
+                      <BugFindingsModal run={run} />
                     </div>
                   ))}
                 </div>

@@ -1,180 +1,155 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Bug, ExternalLink, Calendar, AlertTriangle, ChevronDown } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from "react";
+import { Bug, ExternalLink, Calendar, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
-import { AgentRun, BugFinding } from '@/types/bug';
-import { SlamOnView } from '@/components/ui/slam-on-view';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { AgentRun, BugFinding } from "@/types/bug";
+import { SlamOnView } from "@/components/ui/slam-on-view";
 
-interface BugFindingsDropdownProps {
+interface BugFindingsModalProps {
   run: AgentRun;
-  trigger?: React.ReactNode;
-  className?: string;
 }
 
-export function BugFindingsModal({ run, trigger, className }: BugFindingsDropdownProps) {
+const severityBadgeVariant: Record<BugFinding["severity"], React.ComponentProps<typeof Badge>["variant"]> = {
+  critical: "destructive",
+  high: "destructive",
+  medium: "default",
+  low: "secondary",
+};
+
+export function BugFindingsModal({ run }: BugFindingsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const getSeverityColor = (severity: BugFinding['severity']) => {
-    switch (severity) {
-      case 'critical':
-        return 'destructive';
-      case 'high':
-        return 'destructive';
-      case 'medium':
-        return 'default';
-      case 'low':
-        return 'secondary';
-      default:
-        return 'outline';
+  const getSeverityIcon = (severity: BugFinding["severity"]) => {
+    if (severity === "critical" || severity === "high") {
+      return <AlertTriangle className="h-4 w-4" />;
     }
-  };
-
-  const getSeverityIcon = (severity: BugFinding['severity']) => {
-    switch (severity) {
-      case 'critical':
-      case 'high':
-        return <AlertTriangle className="h-4 w-4" />;
-      default:
-        return <Bug className="h-4 w-4" />;
-    }
+    return <Bug className="h-4 w-4" />;
   };
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm" className="flex items-center space-x-1">
-            <span>View Details</span>
-            <ChevronDown className="h-3 w-3" />
-          </Button>
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className={`w-[95vw] sm:w-[90vw] lg:w-[1200px] 2xl:w-[1400px] max-h-[80vh] overflow-y-auto p-0 ${className || ''}`}>
-        <div className="p-6">
-          <div className="flex items-center space-x-2 mb-4">
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          View Details
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="w-[95vw] sm:max-w-[90vw] lg:max-w-[1200px] 2xl:max-w-[1400px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center space-x-2">
             <Bug className="h-5 w-5" />
-            <h3 className="text-lg font-semibold">Bug Findings - {run.targetUrl}</h3>
-          </div>
-          <p className="text-sm text-muted-foreground mb-6">
+            <span>Bug Findings - {run.targetUrl}</span>
+          </DialogTitle>
+          <DialogDescription>
             Detailed analysis of security vulnerabilities found during the audit
-<<<<<<< HEAD
           </DialogDescription>
           {run.createdByName && (
             <div className="text-xs text-muted-foreground">
               Created by {run.createdByName}
-              {run.createdByEmail ? ` · ${run.createdByEmail}` : ''}
+              {run.createdByEmail ? ` · ${run.createdByEmail}` : ""}
             </div>
           )}
         </DialogHeader>
-=======
-          </p>
->>>>>>> ad836ec3ef97204abe45122d1d2128562e94a3ee
 
-          <div className="space-y-6">
-            {run.bugFindings.length === 0 ? (
-              <div className="text-center py-8">
-                <Bug className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No bugs found in this audit</p>
-              </div>
-            ) : (
-              run.bugFindings.map((finding, index) => (
-                <Card key={finding.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg mb-2">
-                          {finding.title}
-                        </CardTitle>
-                        <p className="text-muted-foreground mb-4">
-                          {finding.description}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={getSeverityColor(finding.severity)}
-                        className="ml-4 flex items-center space-x-1"
-                      >
-                        {getSeverityIcon(finding.severity)}
-                        <span className="capitalize">{finding.severity}</span>
-                      </Badge>
+        <div className="space-y-6">
+          {run.bugFindings.length === 0 ? (
+            <div className="text-center py-8">
+              <Bug className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No bugs found in this audit</p>
+            </div>
+          ) : (
+            run.bugFindings.map((finding, index) => (
+              <Card key={finding.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg mb-2">{finding.title}</CardTitle>
+                      <p className="text-muted-foreground mb-4">{finding.description}</p>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+                    <Badge
+                      variant={severityBadgeVariant[finding.severity]}
+                      className="ml-4 flex items-center space-x-1"
+                    >
+                      {getSeverityIcon(finding.severity)}
+                      <span className="capitalize">{finding.severity}</span>
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Steps to Reproduce:</h4>
+                    <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
+                      {finding.stepsToReproduce.map((step, stepIndex) => (
+                        <li key={stepIndex}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  <SlamOnView>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 dark:bg-yellow-900/20 dark:border-yellow-800">
+                      <div className="flex items-start space-x-2">
+                        <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-yellow-800 mb-1 dark:text-yellow-300">
+                            Roast Message
+                          </h4>
+                          <p className="text-yellow-700 text-sm dark:text-yellow-200">
+                            {finding.roastMessage}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </SlamOnView>
+
+                  {finding.screenshotUrls.length > 0 && (
                     <div>
-                      <h4 className="font-medium mb-2">Steps to Reproduce:</h4>
-                      <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                        {finding.stepsToReproduce.map((step, stepIndex) => (
-                          <li key={stepIndex}>{step}</li>
-                        ))}
-                      </ol>
-                    </div>
-
-                    <SlamOnView>
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 dark:bg-yellow-900/20 dark:border-yellow-800">
-                        <div className="flex items-start space-x-2">
-                          <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium text-yellow-800 mb-1 dark:text-yellow-300">
-                              Roast Message
-                            </h4>
-                            <p className="text-yellow-700 text-sm dark:text-yellow-200">
-                              {finding.roastMessage}
-                            </p>
+                      <h4 className="font-medium mb-2">Screenshots:</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {finding.screenshotUrls.map((url, urlIndex) => (
+                          <div key={urlIndex} className="relative">
+                            <img
+                              src={url}
+                              alt={`Screenshot ${urlIndex + 1}`}
+                              className="w-full h-40 lg:h-48 object-cover rounded-lg border"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="absolute top-2 right-2"
+                              onClick={() => window.open(url, "_blank")}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                    </SlamOnView>
-
-                    {finding.screenshotUrls.length > 0 && (
-                      <div>
-                        <h4 className="font-medium mb-2">Screenshots:</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                          {finding.screenshotUrls.map((url, urlIndex) => (
-                            <div key={urlIndex} className="relative">
-                              <img
-                                src={url}
-                                alt={`Screenshot ${urlIndex + 1}`}
-                                className="w-full h-40 lg:h-48 object-cover rounded-lg border"
-                              />
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="absolute top-2 right-2"
-                                onClick={() => window.open(url, '_blank')}
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        Found on {new Date(finding.createdAt).toLocaleDateString()}
-                      </span>
                     </div>
+                  )}
 
-                    {index < run.bugFindings.length - 1 && (
-                      <Separator className="my-4" />
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>Found on {new Date(finding.createdAt).toLocaleDateString()}</span>
+                  </div>
+
+                  {index < run.bugFindings.length - 1 && <Separator className="my-4" />}
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </DialogContent>
+    </Dialog>
   );
 }
+

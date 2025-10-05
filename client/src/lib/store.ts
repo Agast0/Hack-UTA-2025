@@ -1,12 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-<<<<<<< HEAD
 import { User, Team, AgentRun } from '@/types/bug';
-import { mockUser, mockTeams, mockAgentRuns } from './mock-data';
-=======
-import { User, Team } from '@/types/bug';
-import { mockUser, mockTeams, mockUsers } from './mock-data';
->>>>>>> ad836ec3ef97204abe45122d1d2128562e94a3ee
+import { mockUser, mockTeams, mockUsers, mockAgentRuns } from './mock-data';
 
 interface AuthState {
   user: User | null;
