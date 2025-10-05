@@ -222,6 +222,11 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
         goal_achieved = False
         ai_response = ""
         
+        # Action tracking for bug reproduction
+        action_log = []
+        action_log.append(f"1. Navigate to: {browser_context['current_url']}")
+        action_log.append(f"2. Page loaded: '{browser_context['page_title']}'")
+        
         while current_iteration < max_iterations and not goal_achieved:
             current_iteration += 1
             print(f"\n🔄 ITERATION {current_iteration}/{max_iterations}")
@@ -298,6 +303,10 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                 if element_matches:
                     element_label = element_matches[0]
                     print(f"\n🖱️ EXECUTING: Clicking {element_label}")
+                    
+                    # Log the action for bug reproduction
+                    action_log.append(f"{len(action_log) + 1}. Click on element: {element_label}")
+                    
                     click_result = click_element(driver, element_label, elements)
                     tool_actions.append(f"🖱️ Clicked {element_label}: {click_result.get('message', 'Success')}")
                     
@@ -306,13 +315,17 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                         browser_context['page_info'].update(click_result.get('new_page_info', {}))
                         page_changed = True
                         
-                        # Check if we've reached a login page
+                        # Log the page change
                         new_url = click_result.get('new_page_info', {}).get('current_url', '')
                         new_title = click_result.get('new_page_info', {}).get('title', '')
+                        action_log.append(f"{len(action_log) + 1}. Page changed to: '{new_title}' ({new_url})")
+                        
+                        # Check if we've reached a login page
                         if any(keyword in new_url.lower() or keyword in new_title.lower() 
                                for keyword in ['login', 'signin', 'auth', 'sign-in', 'log-in']):
                             goal_achieved = True
                             print(f"\n🎯 GOAL ACHIEVED! Found login page: {new_title}")
+                            action_log.append(f"{len(action_log) + 1}. ✅ SUCCESS: Reached login page")
                             
                             # Take final screenshot of the login page
                             print(f"\n📸 Taking final screenshot of login page...")
@@ -320,6 +333,7 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                             if "error" not in final_elements:
                                 final_screenshot = take_annotated_screenshot(driver, final_elements)
                                 print(f"📸 Final login page screenshot: {final_screenshot}")
+                                action_log.append(f"{len(action_log) + 1}. Screenshot saved: {final_screenshot}")
                             else:
                                 print(f"⚠️ Could not take final screenshot: {final_elements['error']}")
                             
@@ -329,10 +343,12 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
                 # Determine scroll direction
                 if "down" in ai_response.lower():
                     print(f"\n📜 EXECUTING: Scrolling down")
+                    action_log.append(f"{len(action_log) + 1}. Scroll down the page")
                     scroll_result = scroll_page(driver, "down", 500)
                     tool_actions.append(f"📜 Scrolled down: {scroll_result.get('message', 'Success')}")
                 elif "up" in ai_response.lower():
                     print(f"\n📜 EXECUTING: Scrolling up")
+                    action_log.append(f"{len(action_log) + 1}. Scroll up the page")
                     scroll_result = scroll_page(driver, "up", 500)
                     tool_actions.append(f"📜 Scrolled up: {scroll_result.get('message', 'Success')}")
             
@@ -371,6 +387,11 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
             ai_response += f"\n\n🎯 **MISSION ACCOMPLISHED**: Successfully found and navigated to the login page!"
         else:
             ai_response += f"\n\n❌ **SEARCH INCOMPLETE**: Could not find login page after {max_iterations} iterations."
+        
+        # Add action log for bug reproduction
+        ai_response += f"\n\n## 📋 **STEPS TO REPRODUCE**\n"
+        for step in action_log:
+            ai_response += f"{step}\n"
         
         # Format the response based on browser mode
         browser_status = ""
