@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Bug, ExternalLink, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -21,22 +20,12 @@ interface BugFindingsModalProps {
   run: AgentRun;
 }
 
-const severityBadgeVariant: Record<BugFinding["severity"], React.ComponentProps<typeof Badge>["variant"]> = {
-  critical: "destructive",
-  high: "destructive",
-  medium: "default",
-  low: "secondary",
-};
+// (severity removed)
 
 export function BugFindingsModal({ run }: BugFindingsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const getSeverityIcon = (severity: BugFinding["severity"]) => {
-    if (severity === "critical" || severity === "high") {
-      return <AlertTriangle className="h-4 w-4" />;
-    }
-    return <Bug className="h-4 w-4" />;
-  };
+  // (severity icon removed)
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -72,18 +61,11 @@ export function BugFindingsModal({ run }: BugFindingsModalProps) {
             run.bugFindings.map((finding, index) => (
               <Card key={finding.id}>
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="text-lg mb-2">{finding.title}</CardTitle>
                       <p className="text-muted-foreground mb-4">{finding.description}</p>
                     </div>
-                    <Badge
-                      variant={severityBadgeVariant[finding.severity]}
-                      className="ml-4 flex items-center space-x-1"
-                    >
-                      {getSeverityIcon(finding.severity)}
-                      <span className="capitalize">{finding.severity}</span>
-                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -109,7 +91,7 @@ export function BugFindingsModal({ run }: BugFindingsModalProps) {
                     </div>
 
                   <SlamOnView>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 dark:bg-yellow-900/20 dark:border-yellow-800">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 dark:bg-yellow-900/20 dark:border-yellow-800 roast-trigger">
                       <div className="flex items-start space-x-2">
                         <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
                         <div>

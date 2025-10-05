@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { GlobalClickSound } from "@/components/layout/global-click-sound";
+import { RoastSfxObserver } from "@/components/layout/roast-sfx-observer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,6 +31,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
+          <GlobalClickSound />
+          <RoastSfxObserver />
           {children}
         </Providers>
       </body>

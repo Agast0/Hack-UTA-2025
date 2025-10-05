@@ -141,7 +141,7 @@ export function AuditTable({
 
               {/* Expanded Content */}
               {isExpanded && (
-                <div className="border-t bg-muted/30">
+                <div className="border-t bg-muted/30 -mt-2">
                   <BugFindingsCollapsible run={run} />
                 </div>
               )}

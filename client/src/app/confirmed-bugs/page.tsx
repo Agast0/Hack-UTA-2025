@@ -52,7 +52,7 @@ export default function ConfirmedBugsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" data-confirmed-bugs-page>
       <Header />
       <div className="w-full">
         {/* Page Header */}
@@ -125,6 +125,22 @@ export default function ConfirmedBugsPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2 pt-0">
+                      {/* Roast Message first */}
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 dark:bg-yellow-900/20 dark:border-yellow-800 roast-trigger" data-roast-id={bug.id}>
+                        <div className="flex items-start space-x-2">
+                          <Bug className="h-4 w-4 text-yellow-600 mt-0.5" />
+                          <div className="flex-1">
+                            <h4 className="font-medium text-yellow-800 mb-1 dark:text-yellow-300 text-sm">
+                              Roast Message
+                            </h4>
+                            <p className="text-yellow-700 text-sm dark:text-yellow-200">
+                              {bug.roast}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Reproduction Steps now below roast */}
                       <div>
                         <h4 className="font-medium mb-1 text-sm">Reproduction Steps:</h4>
                         <div className="space-y-4">
@@ -143,20 +159,6 @@ export default function ConfirmedBugsPage() {
                               </div>
                             </div>
                           ))}
-                        </div>
-                      </div>
-
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 dark:bg-yellow-900/20 dark:border-yellow-800">
-                        <div className="flex items-start space-x-2">
-                          <Bug className="h-4 w-4 text-yellow-600 mt-0.5" />
-                          <div className="flex-1">
-                            <h4 className="font-medium text-yellow-800 mb-1 dark:text-yellow-300 text-sm">
-                              Roast Message
-                            </h4>
-                            <p className="text-yellow-700 text-sm dark:text-yellow-200">
-                              {bug.roast}
-                            </p>
-                          </div>
                         </div>
                       </div>
 

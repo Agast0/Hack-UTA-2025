@@ -118,6 +118,25 @@
   }
   body {
     @apply bg-background text-foreground;
+    cursor: url('/cursor.cur'), auto;
+  }
+  /* Force custom cursor everywhere, including all states and sidebar items */
+  *, *:hover, *:active, *:focus {
+    cursor: url('/cursor.cur'), auto !important;
+  }
+  /* Ensure interactive elements also keep the custom pointer style */
+  /* Ensure custom cursor on interactive elements across the site */
+  a,
+  button,
+  [role="button"],
+  label,
+  select,
+  summary,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  .cursor-pointer {
+    cursor: url('/cursor.cur'), pointer !important;
   }
   .bugzooka-font {
     font-family: "Comic Sans MS", "Comic Sans", cursive;

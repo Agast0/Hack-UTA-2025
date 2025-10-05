@@ -232,6 +232,31 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
                 </div>
               </CardHeader>
               <CardContent className="space-y-2 pt-0">
+                {/* Roast Message - Positioned before reproduction steps */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 dark:bg-yellow-900/20 dark:border-yellow-800 animate-slam -mt-4 roast-trigger">
+                  <div className="flex items-start space-x-2">
+                    <Bug className="h-4 w-4 text-yellow-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-yellow-800 mb-1 dark:text-yellow-300 text-sm">
+                        Roast Message
+                      </h4>
+                      {finding.isEditing ? (
+                        <Textarea
+                          value={finding.roast}
+                          onChange={(e) => handleSaveBug(finding.id, { roast: e.target.value })}
+                          placeholder="Roast message"
+                          className="text-yellow-700 text-sm dark:text-yellow-200 bg-transparent border-yellow-300"
+                          rows={3}
+                        />
+                      ) : (
+                        <p className="text-yellow-700 text-sm dark:text-yellow-200">
+                          {finding.roast}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <h4 className="font-medium mb-1 text-sm">Reproduction Steps:</h4>
                   <div className="space-y-4">
@@ -293,29 +318,6 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
                   </div>
                 </div>
 
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 dark:bg-yellow-900/20 dark:border-yellow-800">
-                  <div className="flex items-start space-x-2">
-                    <Bug className="h-4 w-4 text-yellow-600 mt-0.5" />
-                    <div className="flex-1">
-                      <h4 className="font-medium text-yellow-800 mb-1 dark:text-yellow-300 text-sm">
-                        Roast Message
-                      </h4>
-                      {finding.isEditing ? (
-                        <Textarea
-                          value={finding.roast}
-                          onChange={(e) => handleSaveBug(finding.id, { roast: e.target.value })}
-                          placeholder="Roast message"
-                          className="text-yellow-700 text-sm dark:text-yellow-200 bg-transparent border-yellow-300"
-                          rows={3}
-                        />
-                      ) : (
-                        <p className="text-yellow-700 text-sm dark:text-yellow-200">
-                          {finding.roast}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
 
                 {/* Action Buttons - Always Available */}
