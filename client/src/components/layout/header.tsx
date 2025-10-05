@@ -12,12 +12,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth0 } from '@auth0/auth0-react';
+import { ThemeMenu } from '@/components/layout/theme-menu';
 
 export function Header() {
   const { user, logout, isAuthenticated, isLoading } = useAuth0();
 
   return (
-    <header className="bg-black border-b border-gray-800 px-6 py-4">
+    <header className="bg-background border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
@@ -28,10 +29,11 @@ export function Header() {
               <Shield className="h-6 w-6 text-secondary-foreground" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-white bugzooka-font">BugZooka</h1>
+          <h1 className="text-2xl font-bold text-foreground">BugZooka</h1>
         </div>
 
         <div className="flex items-center space-x-4">
+          <ThemeMenu />
           {isLoading ? (
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           ) : isAuthenticated && user ? (

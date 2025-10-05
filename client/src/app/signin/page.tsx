@@ -13,7 +13,7 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
@@ -24,8 +24,8 @@ export default function SignInPage() {
               <Shield className="h-8 w-8 text-secondary-foreground" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2 bugzooka-font">BugZooka</h1>
-          <p className="text-gray-300">Your AI-powered bug hunting companion</p>
+          <h1 className="text-4xl font-bold text-foreground mb-2">BugZooka</h1>
+          <p className="text-muted-foreground">Your AI-powered bug hunting companion</p>
         </div>
 
         <Card>
@@ -45,7 +45,7 @@ export default function SignInPage() {
                 {isLoading ? 'Signing in...' : 'Sign In with Auth0'}
               </Button>
             </div>
-            <div className="mt-4 text-center text-sm text-gray-400">
+            <div className="mt-4 text-center text-sm text-muted-foreground">
               <p>Secure authentication powered by Auth0</p>
             </div>
           </CardContent>
