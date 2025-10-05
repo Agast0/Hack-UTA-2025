@@ -38,27 +38,13 @@ async def run_agent(request: AgentRequestModel):
                 error="GOOGLE_API_KEY environment variable is not set. Please set it with: export GOOGLE_API_KEY='your-api-key-here'"
             )
         
-        # Create mock AgentRequest and AgentResponse objects
-        class MockAgentRequest:
+        # Create FastAPI-compatible request/response objects
+        class FastAPIRequest:
             def __init__(self, text: str, content_type: str = "text/plain"):
-                self._text = text
-                self._content_type = content_type
-            
-            async def data(self):
-                class MockData:
-                    def __init__(self, text: str, content_type: str):
-                        self._text = text
-                        self._content_type = content_type
-                    
-                    async def text(self):
-                        return self._text
-                    
-                    def content_type(self):
-                        return self._content_type
-                
-                return MockData(self._text, self._content_type)
+                self.data = text  # Direct string for FastAPI
+                self.content_type = content_type
         
-        class MockAgentResponse:
+        class FastAPIResponse:
             def __init__(self):
                 self._response = None
             
@@ -66,22 +52,26 @@ async def run_agent(request: AgentRequestModel):
                 self._response = response_text
                 return self
             
+            def json(self, data: dict):
+                self._response = str(data)
+                return self
+            
             def get_response(self):
                 return self._response
         
-        class MockAgentContext:
+        class FastAPIContext:
             def __init__(self):
                 self.logger = logger
         
-        # Create mock objects
-        mock_request = MockAgentRequest(request.text, request.content_type)
-        mock_response = MockAgentResponse()
-        mock_context = MockAgentContext()
+        # Create FastAPI-compatible objects
+        fastapi_request = FastAPIRequest(request.text, request.content_type)
+        fastapi_response = FastAPIResponse()
+        fastapi_context = FastAPIContext()
         
-        # Run the agent
-        await run(mock_request, mock_response, mock_context)
+        # Run the agent with FastAPI-compatible objects
+        await run(fastapi_request, fastapi_response, fastapi_context)
         
-        response_text = mock_response.get_response()
+        response_text = fastapi_response.get_response()
         
         return AgentResponseModel(
             response=response_text,

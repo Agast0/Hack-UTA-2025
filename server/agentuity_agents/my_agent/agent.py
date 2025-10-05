@@ -3,8 +3,8 @@ from google import genai
 import os
 
 # Import from separated modules
-from .system_prompt import SYSTEM_PROMPT, AGENT_CONFIG, ERROR_MESSAGES, SUCCESS_MESSAGES
-from .tools import (
+from agentuity_agents.my_agent.system_prompt import SYSTEM_PROMPT, AGENT_CONFIG, ERROR_MESSAGES, SUCCESS_MESSAGES
+from agentuity_agents.my_agent.tools import (
     validate_url, setup_chrome_driver, navigate_to_url, discover_page_elements, 
     take_annotated_screenshot, remove_annotations, click_element, scroll_page, 
     extract_element_info, BROWSER_TOOLS
@@ -108,9 +108,49 @@ async def run(request: AgentRequest, response: AgentResponse, context: AgentCont
     First does deterministic browser setup, then LLM agent takes over.
     """
     try:
-        # Get the input text (URL)
-        data = await request.data()
-        input_url = await data.text()
+        # Get the input text (URL) - handle both FastAPI and Agentuity dynamically
+        input_url = None
+        
+        # Try different data access patterns
+        try:
+            # Pattern 1: Agentuity style - request.data.text()
+            if hasattr(request.data, 'text'):
+                data_text = await request.data.text()
+                # Handle JSON format from Agentuity
+                if data_text.startswith('{') and 'url' in data_text:
+                    import json
+                    data_obj = json.loads(data_text)
+                    input_url = data_obj.get('url', data_text)
+                else:
+                    input_url = data_text
+        except:
+            pass
+            
+        if not input_url:
+            try:
+                # Pattern 2: FastAPI style - request.data directly
+                if hasattr(request.data, 'url'):
+                    input_url = request.data.url
+                elif isinstance(request.data, str):
+                    input_url = request.data
+                elif hasattr(request.data, 'get'):
+                    input_url = request.data.get('url', request.data)
+            except:
+                pass
+                
+        if not input_url:
+            try:
+                # Pattern 3: JSON string format
+                if isinstance(request.data, str) and request.data.startswith('{'):
+                    import json
+                    data_obj = json.loads(request.data)
+                    input_url = data_obj.get('url', request.data)
+            except:
+                pass
+                
+        if not input_url:
+            # Pattern 4: Final fallback
+            input_url = str(request.data)
         
         # STEP 1: Deterministic browser setup (no LLM involved)
         success, message, browser_context = deterministic_browser_setup(input_url, context)
