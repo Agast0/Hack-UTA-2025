@@ -4,11 +4,13 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Bug, Target } from 'lucide-react';
+import { Shield, Bug, Target, Gamepad2 } from 'lucide-react';
 import Image from 'next/image';
+import { useUiStore } from '@/lib/store';
 
 export default function SignInPage() {
   const { loginWithRedirect, isLoading } = useAuth0();
+  const { mlgMode, toggleMlgMode } = useUiStore();
 
   const handleLogin = () => {
     loginWithRedirect();
@@ -108,8 +110,21 @@ export default function SignInPage() {
           </CardContent>
         </Card>
 
+        {/* MLG Mode Toggle */}
+        <div className="text-center mt-6">
+          <Button
+            variant={mlgMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={toggleMlgMode}
+            className="inline-flex items-center space-x-2"
+          >
+            <Gamepad2 className="h-4 w-4" />
+            <span>MLG Mode</span>
+          </Button>
+        </div>
+
         {/* Footer */}
-        <div className="text-center mt-8">
+        <div className="text-center mt-6">
           <p className="text-sm text-muted-foreground">
             Built with ❤️ for HackUTA 2025
           </p>

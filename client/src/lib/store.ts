@@ -41,6 +41,17 @@ interface BugsState {
   getBugReportsByTeamId: (teamId: string) => BugReport[];
 }
 
+export const useUiStore = create<UiState>()(
+  persist(
+    (set, get) => ({
+      mlgMode: false,
+      toggleMlgMode: () => set({ mlgMode: !get().mlgMode }),
+      setMlgMode: (value: boolean) => set({ mlgMode: value }),
+    }),
+    { name: 'ui-storage' }
+  )
+);
+
 interface RunsState {
   runs: AgentRun[];
   addRun: (run: AgentRun) => void;

@@ -1,6 +1,6 @@
 'use client';
 
-import { User, LogOut } from 'lucide-react';
+import { User, LogOut, Gamepad2 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,9 +14,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ThemeMenu } from '@/components/layout/theme-menu';
+import { useUiStore } from '@/lib/store';
 
 export function Header() {
   const { user, logout, isAuthenticated, isLoading } = useAuth0();
+  const { mlgMode, toggleMlgMode } = useUiStore();
 
   return (
     <header className="bg-background border-b border-border px-6 py-4">
@@ -35,6 +37,16 @@ export function Header() {
         </div>
 
         <div className="flex items-center space-x-4">
+          <Button
+            variant={mlgMode ? 'default' : 'outline'}
+            size="sm"
+            onClick={toggleMlgMode}
+            className="flex items-center space-x-2"
+            title="Toggle MLG Mode"
+          >
+            <Gamepad2 className="h-4 w-4" />
+            <span>MLG Mode</span>
+          </Button>
           <ThemeMenu />
           {isLoading ? (
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
