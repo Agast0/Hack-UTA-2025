@@ -33,8 +33,8 @@ export function MainContent() {
   const [includeSubdomains, setIncludeSubdomains] = useState(false);
 
   const selectedTeam = teams.find(team => team.id === selectedTeamId);
-  const teamRuns = selectedTeamId 
-    ? mockAgentRuns.filter(run => run.id === selectedTeamId)
+  const teamRuns = selectedTeamId
+    ? mockAgentRuns.filter((run) => run.teamId === selectedTeamId)
     : [];
 
   const handleCreateAudit = () => {
@@ -182,7 +182,12 @@ export function MainContent() {
             </CardHeader>
             <CardContent>
               {teamRuns.length > 0 ? (
-                <DataTable columns={auditColumns} data={teamRuns} />
+                <DataTable
+                  columns={auditColumns}
+                  data={teamRuns}
+                  filterColumnId="targetUrl"
+                  filterPlaceholder="Filter URLs..."
+                />
               ) : (
                 <div className="text-center py-8">
                   <Bug className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
