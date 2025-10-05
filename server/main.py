@@ -1,12 +1,22 @@
 import os
 import logging
-from fastapi import FastAPI, HTTPException
+from typing import List, Optional
+from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-from beanie import init_beanie
+from beanie import init_beanie, PydanticObjectId
 from dotenv import load_dotenv
 
-from models import User, UserCreate, SyncResponse   # Import your models
+# Import all models, including the new ones
+from models import (
+    User,
+    UserCreate,
+    SyncResponse,
+    BugReport,
+    BugReportCreate,
+    BugReportUpdate,
+    DeleteResponse,
+)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -44,9 +54,7 @@ app = FastAPI()
 # --- CORS Middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        '*'
-    ],  # Or specify your frontend URL e.g., "http://localhost:3000"
+    allow_origins=['*'],
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
@@ -63,7 +71,10 @@ async def startup_db_client():
         )
         exit(1)
     client = AsyncIOMotorClient(mongo_uri)
-    await init_beanie(database=client[db_name], document_models=[User])
+    # Add the BugReport model to the list for Beanie initialization
+    await init_beanie(
+        database=client[db_name], document_models=[User, BugReport]
+    )
     print('MongoDB connection established successfully!')
 
 
@@ -75,19 +86,14 @@ def read_root():
     return {'message': 'Backend server is running!'}
 
 
+# --- User Endpoints ---
 @app.post('/api/create', response_model=SyncResponse)
 async def create_user(user_data: UserCreate):
-    """
-    Finds a user by their Auth0 ID and creates them if they don't exist (upsert).
-    FastAPI automatically validates the incoming body against the UserCreate model.
-    """
-    # Check if the user already exists
     existing_user = await User.find_one(User.auth0Id == user_data.sub)
 
     if existing_user:
         return {'message': 'User already exists', 'user': existing_user}
 
-    # If user does not exist, create a new one
     new_user = User(
         auth0Id=user_data.sub,
         email=user_data.email,
@@ -101,20 +107,107 @@ async def create_user(user_data: UserCreate):
 
 @app.get('/api/user/{auth0Id}', response_model=User)
 async def get_user(auth0Id: str):
-    """
-    Fetches a user by their auth0Id from the database.
-    The {auth0Id} in the path is automatically passed as an argument.
-    """
-    # In FastAPI, you need to manually URL-decode the pipe character
     decoded_auth0Id = auth0Id.replace('%7C', '|')
-
     user = await User.find_one(User.auth0Id == decoded_auth0Id)
 
     if not user:
-        # This is the FastAPI way of sending an error response
         raise HTTPException(status_code=404, detail='User not found.')
 
     return user
+
+
+# --- Bug Report CRUD Endpoints ---
+
+
+@app.post(
+    '/api/bugs', response_model=BugReport, status_code=status.HTTP_201_CREATED
+)
+async def submit_bug_report(report_data: BugReportCreate):
+    """
+    Creates a new bug report. It will automatically be marked as 'not approved'.
+    """
+    new_report = BugReport(
+        title=report_data.title, description=report_data.description
+    )
+    await new_report.insert()
+    return new_report
+
+
+@app.get('/api/bugs', response_model=List[BugReport])
+async def get_bug_reports(
+    status: Optional[str] = Query(
+        None, description="Filter by status: 'approved' or 'not_approved'"
+    )
+):
+    """
+    Fetches bug reports. Can be filtered by approval status.
+    """
+    if status == 'approved':
+        query = BugReport.find(BugReport.is_approved == True)
+    elif status == 'not_approved':
+        query = BugReport.find(BugReport.is_approved == False)
+    else:
+        query = BugReport.find_all()
+
+    reports = await query.to_list()
+    return reports
+
+
+@app.get('/api/bugs/{bug_id}', response_model=BugReport)
+async def get_bug_report(bug_id: PydanticObjectId):
+    """
+    Fetches a single bug report by its unique ID.
+    """
+    report = await BugReport.get(bug_id)
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Bug report not found.',
+        )
+    return report
+
+
+@app.put('/api/bugs/{bug_id}', response_model=BugReport)
+async def update_bug_report(
+    bug_id: PydanticObjectId, report_update: BugReportUpdate
+):
+    """
+    Updates a bug report's details (e.g., approve it).
+    """
+    report = await BugReport.get(bug_id)
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Bug report not found.',
+        )
+
+    # Get a dictionary of the fields that were actually sent in the request
+    update_data = report_update.model_dump(exclude_unset=True)
+
+    # Loop through the update data and apply it to the document instance
+    for key, value in update_data.items():
+        setattr(report, key, value)
+
+    # Save the changes to the database
+    await report.save()
+
+    return report
+
+
+@app.delete('/api/bugs/{bug_id}', response_model=DeleteResponse)
+async def delete_bug_report(bug_id: PydanticObjectId):
+    """
+    Deletes a bug report by its unique ID.
+    """
+    report = await BugReport.get(bug_id)
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail='Bug report not found.',
+        )
+
+    await report.delete()
+    return {'message': 'Bug report deleted successfully.'}
 
 
 if __name__ == '__main__':

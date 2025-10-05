@@ -1,9 +1,29 @@
 [
   {
-    "sub": "auth0|123456789",
-    "email": "test.user@example.com",
-    "name": "Test User",
-    "picture": "https://example.com/avatar.png"
+    "fetch": [
+      "http://localhost:8000/api/user/auth0%7C123456789",
+      "http://localhost:8000/api/bugs",
+      "http://localhost:8000/api/bugs?status=approved",
+      "http://localhost:8000/api/bugs?status=not_approved",
+      "http://localhost:8000/api/bugs/68e1ca023b55eafc8553db21"
+    ]
   },
-  "http://localhost:8000/api/user/auth0%7C123456789"
+  {
+    "post": [
+      {
+        "http://localhost:8000/api/create": {
+          "sub": "auth0|123456789",
+          "email": "test.user@example.com",
+          "name": "Test User",
+          "picture": "https://example.com/avatar.png"
+        }
+      },
+      {
+        "http://localhost:8000/api/bugs": {
+          "title": "Login button unresponsive",
+          "description": "The main login button on the homepage does not do anything when clicked."
+        }
+      }
+    ]
+  }
 ]
