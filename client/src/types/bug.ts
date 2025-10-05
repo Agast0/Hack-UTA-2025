@@ -23,7 +23,7 @@ export const AgentRunSchema = z.object({
   settings: z.object({
     maxDepth: z.number().default(3),
     includeSubdomains: z.boolean().default(false),
-    customHeaders: z.record(z.string()).optional(),
+    customHeaders: z.record(z.string(), z.string()).optional(),
   }),
   status: z.enum(['pending', 'running', 'completed', 'failed']),
   bugFindings: z.array(BugFindingSchema),
@@ -33,21 +33,49 @@ export const AgentRunSchema = z.object({
 
 export type AgentRun = z.infer<typeof AgentRunSchema>;
 
+// Updated Team type to match backend API
 export const TeamSchema = z.object({
   id: z.string(),
   name: z.string(),
-  description: z.string().optional(),
-  createdAt: z.date(),
-  memberCount: z.number().default(1),
+  team_type: z.enum(['front-end', 'back-end']),
+  members: z.array(z.object({
+    id: z.string(),
+    auth0Id: z.string(),
+    email: z.string(),
+    name: z.string().optional(),
+    picture: z.string().optional(),
+  })).default([]).optional(),
 });
 
 export type Team = z.infer<typeof TeamSchema>;
 
+// Updated User type to match backend API
 export const UserSchema = z.object({
   id: z.string(),
-  email: z.string().email(),
-  name: z.string(),
-  avatar: z.string().optional(),
+  auth0Id: z.string(),
+  email: z.string(),
+  name: z.string().optional(),
+  picture: z.string().optional(),
+  team: z.object({
+    id: z.string(),
+    name: z.string(),
+    team_type: z.enum(['front-end', 'back-end']),
+  }).optional(),
 });
 
 export type User = z.infer<typeof UserSchema>;
+
+// Bug Report type to match backend API
+export const BugReportSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  is_approved: z.boolean(),
+  team: z.object({
+    id: z.string(),
+    name: z.string(),
+    team_type: z.enum(['front-end', 'back-end']),
+  }),
+});
+
+export type BugReport = z.infer<typeof BugReportSchema>;

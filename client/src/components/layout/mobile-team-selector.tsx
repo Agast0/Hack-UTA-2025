@@ -19,7 +19,7 @@ export function MobileTeamSelector() {
   const selectedTeam = teams.find(team => team.id === selectedTeamId);
 
   return (
-    <div className="lg:hidden p-4 border-b border-gray-200 bg-white">
+    <div className="lg:hidden p-4 border-b border-border bg-background">
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="w-full justify-between">

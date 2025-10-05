@@ -1,6 +1,8 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Auth0Provider } from '@auth0/auth0-react';
+import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
 import { useState } from 'react';
 
@@ -8,9 +10,21 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <Toaster />
-    </QueryClientProvider>
+    <Auth0Provider
+      domain="dev-h52hz8oszd0xc8yd.us.auth0.com"
+      clientId="2Y14d36migYyogqJARf1X7szyqClwTc4"
+      authorizationParams={{
+        redirect_uri: 'http://localhost:3000/callback'
+      }}
+      useRefreshTokens={true}
+      cacheLocation="localstorage"
+    >
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {children}
+          <Toaster />
+        </ThemeProvider>
+      </QueryClientProvider>
+    </Auth0Provider>
   );
 }

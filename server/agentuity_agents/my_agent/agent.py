@@ -21,9 +21,10 @@ from agentuity_agents.my_agent.tools import (
 # --- API and Client Initialization ---
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
-    raise ValueError("GOOGLE_API_KEY environment variable not set.")
-
-client = genai.Client(api_key=api_key)
+    print("WARNING: GOOGLE_API_KEY environment variable not set. AI agent features will be disabled.")
+    client = None
+else:
+    client = genai.Client(api_key=api_key)
 
 # --- Tool Dispatcher ---
 AVAILABLE_TOOLS = {

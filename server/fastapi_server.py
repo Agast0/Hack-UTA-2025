@@ -57,10 +57,9 @@ if __name__ == "__main__":
     import uvicorn
     import os
     
-    # Check for required environment variables
+    # Check for optional environment variables
     if not os.getenv("GOOGLE_API_KEY"):
-        logger.error("GOOGLE_API_KEY environment variable is required")
-        exit(1)
+        logger.warning("GOOGLE_API_KEY environment variable not set - AI agent features will be disabled")
     
     # Run the server
     uvicorn.run(
