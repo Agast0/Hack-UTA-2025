@@ -45,7 +45,7 @@ export default function SignInPage() {
               alt="BugZooka Logo"
               width={180}
               height={180}
-              className="rounded-2xl shadow-2xl"
+              className="rounded-2xl dark:shadow-2xl"
             />
           </div>
           <h1 className="text-5xl font-bold text-foreground mb-3 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent leading-tight pb-2">
