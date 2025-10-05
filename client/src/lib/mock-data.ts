@@ -79,16 +79,28 @@ export const mockBugFindings: BugFinding[] = [
     id: 'bug-1',
     title: 'SQL Injection Vulnerability',
     description: 'The login form is vulnerable to SQL injection attacks through the username field.',
-    stepsToReproduce: [
-      'Navigate to the login page',
-      'Enter "admin\' OR \'1\'=\'1" in the username field',
-      'Enter any password',
-      'Click login',
-    ],
-    roastMessage: getRoastMessage('critical'),
-    screenshotUrls: [
-      'https://via.placeholder.com/400x300/ff0000/ffffff?text=SQL+Injection',
-      'https://via.placeholder.com/400x300/ff0000/ffffff?text=Database+Access',
+    roast: getRoastMessage('critical'),
+    reproduction_steps: [
+      {
+        step_number: 1,
+        text: 'Navigate to the login page',
+        image_url: 'https://via.placeholder.com/400x300/ff0000/ffffff?text=Step+1',
+      },
+      {
+        step_number: 2,
+        text: 'Enter "admin\' OR \'1\'=\'1" in the username field',
+        image_url: 'https://via.placeholder.com/400x300/ff0000/ffffff?text=Step+2',
+      },
+      {
+        step_number: 3,
+        text: 'Enter any password',
+        image_url: 'https://via.placeholder.com/400x300/ff0000/ffffff?text=Step+3',
+      },
+      {
+        step_number: 4,
+        text: 'Click login',
+        image_url: 'https://via.placeholder.com/400x300/ff0000/ffffff?text=Step+4',
+      },
     ],
     status: 'pending',
   },
@@ -96,15 +108,28 @@ export const mockBugFindings: BugFinding[] = [
     id: 'bug-2',
     title: 'XSS in Search Function',
     description: 'The search functionality is vulnerable to cross-site scripting attacks.',
-    stepsToReproduce: [
-      'Navigate to the search page',
-      'Enter "<script>alert(\\\'XSS\\\')</script>" in the search field',
-      'Click search',
-      'Observe the alert popup',
-    ],
-    roastMessage: getRoastMessage('high'),
-    screenshotUrls: [
-      'https://via.placeholder.com/400x300/ff8800/ffffff?text=XSS+Alert',
+    roast: getRoastMessage('high'),
+    reproduction_steps: [
+      {
+        step_number: 1,
+        text: 'Navigate to the search page',
+        image_url: 'https://via.placeholder.com/400x300/ff8800/ffffff?text=Step+1',
+      },
+      {
+        step_number: 2,
+        text: 'Enter "<script>alert(\\\'XSS\\\')</script>" in the search field',
+        image_url: 'https://via.placeholder.com/400x300/ff8800/ffffff?text=Step+2',
+      },
+      {
+        step_number: 3,
+        text: 'Click search',
+        image_url: 'https://via.placeholder.com/400x300/ff8800/ffffff?text=Step+3',
+      },
+      {
+        step_number: 4,
+        text: 'Observe the alert popup',
+        image_url: 'https://via.placeholder.com/400x300/ff8800/ffffff?text=Step+4',
+      },
     ],
     status: 'pending',
   },
@@ -112,15 +137,28 @@ export const mockBugFindings: BugFinding[] = [
     id: 'bug-3',
     title: 'Missing CSRF Protection',
     description: 'Forms are missing CSRF tokens, making them vulnerable to cross-site request forgery.',
-    stepsToReproduce: [
-      'Login to the application',
-      'Open browser developer tools',
-      'Inspect the form elements',
-      'Notice the absence of CSRF tokens',
-    ],
-    roastMessage: getRoastMessage('medium'),
-    screenshotUrls: [
-      'https://via.placeholder.com/400x300/ffff00/000000?text=No+CSRF+Token',
+    roast: getRoastMessage('medium'),
+    reproduction_steps: [
+      {
+        step_number: 1,
+        text: 'Login to the application',
+        image_url: 'https://via.placeholder.com/400x300/ffff00/000000?text=Step+1',
+      },
+      {
+        step_number: 2,
+        text: 'Open browser developer tools',
+        image_url: 'https://via.placeholder.com/400x300/ffff00/000000?text=Step+2',
+      },
+      {
+        step_number: 3,
+        text: 'Inspect the form elements',
+        image_url: 'https://via.placeholder.com/400x300/ffff00/000000?text=Step+3',
+      },
+      {
+        step_number: 4,
+        text: 'Notice the absence of CSRF tokens',
+        image_url: 'https://via.placeholder.com/400x300/ffff00/000000?text=Step+4',
+      },
     ],
     status: 'pending',
   },
@@ -128,15 +166,28 @@ export const mockBugFindings: BugFinding[] = [
     id: 'bug-4',
     title: 'Weak Password Policy',
     description: 'The application accepts weak passwords without proper validation.',
-    stepsToReproduce: [
-      'Navigate to the registration page',
-      'Enter "123" as the password',
-      'Submit the form',
-      'Notice the weak password is accepted',
-    ],
-    roastMessage: getRoastMessage('low'),
-    screenshotUrls: [
-      'https://via.placeholder.com/400x300/00ff00/000000?text=Weak+Password',
+    roast: getRoastMessage('low'),
+    reproduction_steps: [
+      {
+        step_number: 1,
+        text: 'Navigate to the registration page',
+        image_url: 'https://via.placeholder.com/400x300/00ff00/000000?text=Step+1',
+      },
+      {
+        step_number: 2,
+        text: 'Enter "123" as the password',
+        image_url: 'https://via.placeholder.com/400x300/00ff00/000000?text=Step+2',
+      },
+      {
+        step_number: 3,
+        text: 'Submit the form',
+        image_url: 'https://via.placeholder.com/400x300/00ff00/000000?text=Step+3',
+      },
+      {
+        step_number: 4,
+        text: 'Notice the weak password is accepted',
+        image_url: 'https://via.placeholder.com/400x300/00ff00/000000?text=Step+4',
+      },
     ],
     status: 'pending',
   },

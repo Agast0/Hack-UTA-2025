@@ -119,12 +119,24 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
               </CardHeader>
               <CardContent className="space-y-2 pt-0">
                 <div>
-                  <h4 className="font-medium mb-1 text-sm">Steps to Reproduce:</h4>
-                  <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                    {finding.stepsToReproduce.map((step, stepIndex) => (
-                      <li key={stepIndex}>{step}</li>
+                  <h4 className="font-medium mb-1 text-sm">Reproduction Steps:</h4>
+                  <div className="space-y-4">
+                    {finding.reproduction_steps.map((step, stepIndex) => (
+                      <div key={stepIndex} className="flex items-start space-x-3 p-3 border rounded-lg bg-muted/30">
+                        <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium">
+                          {step.step_number}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-foreground mb-2">{step.text}</p>
+                          <img 
+                            src={step.image_url} 
+                            alt={`Step ${step.step_number} screenshot`}
+                            className="w-full max-w-md h-32 object-cover rounded border"
+                          />
+                        </div>
+                      </div>
                     ))}
-                  </ol>
+                  </div>
                 </div>
 
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 dark:bg-yellow-900/20 dark:border-yellow-800">
@@ -135,36 +147,12 @@ export function BugFindingsCollapsible({ run }: BugFindingsCollapsibleProps) {
                         Roast Message
                       </h4>
                       <p className="text-yellow-700 text-sm dark:text-yellow-200">
-                        {finding.roastMessage}
+                        {finding.roast}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                {finding.screenshotUrls.length > 0 && (
-                  <div>
-                    <h4 className="font-medium mb-1 text-sm">Screenshots:</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {finding.screenshotUrls.map((url, urlIndex) => (
-                        <div key={urlIndex} className="relative">
-                          <img
-                            src={url}
-                            alt={`Screenshot ${urlIndex + 1}`}
-                            className="w-full h-24 object-cover rounded border"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="absolute top-1 right-1 h-6 w-6 p-0"
-                            onClick={() => window.open(url, '_blank')}
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Action Buttons - Always Available */}
                 <div className="flex items-center space-x-2 pt-3 border-t">

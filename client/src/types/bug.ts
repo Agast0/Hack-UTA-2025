@@ -7,9 +7,12 @@ export const BugFindingSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string(),
-  stepsToReproduce: z.array(z.string()),
-  roastMessage: z.string(),
-  screenshotUrls: z.array(z.string()),
+  roast: z.string(),
+  reproduction_steps: z.array(z.object({
+    step_number: z.number(),
+    text: z.string(),
+    image_url: z.string(),
+  })),
   status: z.enum(['pending', 'confirmed', 'rejected']).default('pending'),
 });
 
