@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { AgentRun, BugFinding } from '@/types/bug';
+import { SlamOnView } from '@/components/ui/slam-on-view';
 
 interface BugFindingsModalProps {
   run: AgentRun;
@@ -55,7 +56,7 @@ export function BugFindingsModal({ run }: BugFindingsModalProps) {
           View Details
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] sm:max-w-[90vw] lg:max-w-[1200px] 2xl:max-w-[1400px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Bug className="h-5 w-5" />
@@ -104,30 +105,32 @@ export function BugFindingsModal({ run }: BugFindingsModalProps) {
                     </ol>
                   </div>
 
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-start space-x-2">
-                      <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-yellow-800 mb-1">
-                          Roast Message
-                        </h4>
-                        <p className="text-yellow-700 text-sm">
-                          {finding.roastMessage}
-                        </p>
+                  <SlamOnView>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 dark:bg-yellow-900/20 dark:border-yellow-800">
+                      <div className="flex items-start space-x-2">
+                        <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                        <div>
+                          <h4 className="font-medium text-yellow-800 mb-1 dark:text-yellow-300">
+                            Roast Message
+                          </h4>
+                          <p className="text-yellow-700 text-sm dark:text-yellow-200">
+                            {finding.roastMessage}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </SlamOnView>
 
                   {finding.screenshotUrls.length > 0 && (
                     <div>
                       <h4 className="font-medium mb-2">Screenshots:</h4>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
                         {finding.screenshotUrls.map((url, urlIndex) => (
                           <div key={urlIndex} className="relative">
                             <img
                               src={url}
                               alt={`Screenshot ${urlIndex + 1}`}
-                              className="w-full h-32 object-cover rounded-lg border"
+                              className="w-full h-40 lg:h-48 object-cover rounded-lg border"
                             />
                             <Button
                               size="sm"

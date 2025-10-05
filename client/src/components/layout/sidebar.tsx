@@ -41,10 +41,10 @@ export function Sidebar() {
   };
 
   return (
-    <div className="w-80 bg-gray-50 border-r border-gray-200 h-full overflow-y-auto hidden lg:block">
+    <div className="w-80 bg-background border-r border-border h-full overflow-y-auto hidden lg:block">
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900">Teams</h2>
+          <h2 className="text-lg font-semibold text-foreground">Teams</h2>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="h-8">
@@ -99,7 +99,7 @@ export function Sidebar() {
               className={`cursor-pointer transition-all hover:shadow-md ${
                 selectedTeamId === team.id
                   ? 'ring-2 ring-primary bg-primary/5'
-                  : 'hover:bg-gray-100'
+                  : 'hover:bg-accent'
               }`}
               onClick={() => setSelectedTeam(team.id)}
             >
@@ -120,7 +120,7 @@ export function Sidebar() {
               </CardHeader>
               {team.description && (
                 <CardContent className="pt-0">
-                  <p className="text-xs text-gray-600">{team.description}</p>
+                  <p className="text-xs text-muted-foreground">{team.description}</p>
                 </CardContent>
               )}
             </Card>
@@ -129,8 +129,8 @@ export function Sidebar() {
 
         {teams.length === 0 && (
           <div className="text-center py-8">
-            <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-sm text-gray-500 mb-4">
+            <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-sm text-muted-foreground mb-4">
               No teams yet. Create your first team to get started!
             </p>
           </div>

@@ -35,11 +35,15 @@ import {
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
+  filterColumnId?: string
+  filterPlaceholder?: string
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
+  filterColumnId,
+  filterPlaceholder = "Filter...",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -68,14 +72,27 @@ export function DataTable<TData, TValue>({
     },
   })
 
+  // Determine which column to filter on by default
+  const defaultFilterCol =
+    filterColumnId ||
+    table
+      .getAllLeafColumns()
+      .find((c) => c.getCanFilter())?.id ||
+    table.getAllLeafColumns()[0]?.id
+
   return (
     <div className="w-full">
       <div className="flex items-center py-4">
         <Input
-          placeholder="Filter..."
-          value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
+          placeholder={filterPlaceholder}
+          value={
+            (defaultFilterCol &&
+              (table.getColumn(defaultFilterCol)?.getFilterValue() as string)) ||
+            ""
+          }
           onChange={(event) =>
-            table.getColumn("title")?.setFilterValue(event.target.value)
+            defaultFilterCol &&
+            table.getColumn(defaultFilterCol)?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />
